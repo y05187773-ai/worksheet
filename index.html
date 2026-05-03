@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V6 - 2Column Support</title>
+    <title>教材設計エンジニア V9 - Panel Toggle Support</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -41,17 +41,13 @@
             position: relative;
             transition: height 0.2s ease-in-out;
         }
-        .edit-border {
-            border: 2px dashed #93c5fd;
-            border-radius: 8px;
-            padding: 8px;
-            background-color: #eff6ff;
-        }
         .column-divider {
             border-left: 1px dashed #cbd5e1;
             margin-left: 1rem;
             padding-left: 1rem;
         }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -72,6 +68,16 @@
                 }
             }, [name, size]);
             return <span ref={iconRef} className={`inline-flex items-center justify-center align-middle ${className}`}></span>;
+        };
+
+        const blockInfo = {
+            text: { label: 'テキスト・本文', icon: 'type' },
+            bullets: { label: '箇条書きリスト', icon: 'list' },
+            fill_in_box: { label: '強調穴埋め', icon: 'box-select' },
+            keywords: { label: 'ヒント語群', icon: 'tags' },
+            quote: { label: '引用文', icon: 'quote' },
+            write_box: { label: '記述枠', icon: 'pen-tool' },
+            self_eval: { label: '自己評価枠', icon: 'check-square' }
         };
 
         const defaultData = {
@@ -129,6 +135,8 @@
             const [boxHeights, setBoxHeights] = useState({});
             const [overflows, setOverflows] = useState({});
             const [selectedFont, setSelectedFont] = useState('kyokasho');
+            const [showHelp, setShowHelp] = useState(false);
+            const [isPanelOpen, setIsPanelOpen] = useState(true); // パネル開閉用ステート
             const fileInputRef = useRef(null);
 
             const fontOptions = [
@@ -143,7 +151,9 @@
                 const processBlocks = (blocks) => {
                     if(!blocks) return;
                     blocks.forEach(block => {
-                        if (block.type === 'write_box') newHeights[block.boxId] = block.defaultHeight || 120;
+                        if (block.type === 'write_box') {
+                            newHeights[block.boxId] = block.defaultHeight || 120;
+                        }
                     });
                 };
                 worksheetData.sections.forEach(section => {
@@ -154,7 +164,6 @@
                 setBoxHeights(prev => ({...newHeights, ...prev}));
             }, [worksheetData]);
 
-            // ページ溢れ検知
             useEffect(() => {
                 const timer = setTimeout(() => {
                     const pageElements = document.querySelectorAll('.worksheet-page');
@@ -184,13 +193,13 @@
             const handleUndo = () => { if (historyIndex > 0) { const idx = historyIndex - 1; setHistoryIndex(idx); setWorksheetData(history[idx]); } };
             const handleRedo = () => { if (historyIndex < history.length - 1) { const idx = historyIndex + 1; setHistoryIndex(idx); setWorksheetData(history[idx]); } };
             const updateAnswer = (key, val) => updateData(d => { d.answers[key] = val; });
-            
+
             const addBlock = (sIdx, type, col = 'blocks') => {
                 updateData(d => {
                     const newId = `key_${Date.now()}`;
                     let newBlock = { type };
                     if (type === 'text') newBlock = { type, content: "新しいテキスト", bold: false, fontSize: "text-base", textAlign: "text-left" };
-                    if (type === 'bullets') newBlock = { type, items: ["項目1", "項目2"] };
+                    if (type === 'bullets') newBlock = { type, items: ["項目1"] };
                     if (type === 'fill_in_box') newBlock = { type, label: "問い", answerKey: newId };
                     if (type === 'keywords') newBlock = { type, words: ["キーワード"] };
                     if (type === 'quote') newBlock = { type, content: "引用文" };
@@ -199,6 +208,21 @@
                     if (!d.sections[sIdx][col]) d.sections[sIdx][col] = [];
                     d.sections[sIdx][col].push(newBlock);
                     if (type === 'fill_in_box' || type === 'write_box') d.answers[newId] = "解答例";
+                });
+            };
+
+            const cloneBlock = (sIdx, bIdx, col = 'blocks') => {
+                updateData(d => {
+                    const original = d.sections[sIdx][col][bIdx];
+                    const clone = JSON.parse(JSON.stringify(original));
+                    if (clone.boxId || clone.answerKey) {
+                        const newId = `key_${Date.now()}`;
+                        const oldId = clone.boxId || clone.answerKey;
+                        if (clone.boxId) clone.boxId = newId;
+                        if (clone.answerKey) clone.answerKey = newId;
+                        d.answers[newId] = d.answers[oldId] || "";
+                    }
+                    d.sections[sIdx][col].splice(bIdx + 1, 0, clone);
                 });
             };
 
@@ -212,6 +236,27 @@
             };
 
             const addSection = () => updateData(d => { d.sections.push({ id: `s_${Date.now()}`, title: "新しい大問", criteria: "評価規準", layout: "1-col", blocks: [] }); });
+            const cloneSection = (sIdx) => updateData(d => {
+                const clone = JSON.parse(JSON.stringify(d.sections[sIdx]));
+                clone.id = `s_${Date.now()}`;
+                const reMapIds = (blocks) => {
+                    if(!blocks) return;
+                    blocks.forEach(b => {
+                        if (b.boxId || b.answerKey) {
+                            const oldId = b.boxId || b.answerKey;
+                            const newId = `key_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+                            if (b.boxId) b.boxId = newId;
+                            if (b.answerKey) b.answerKey = newId;
+                            d.answers[newId] = d.answers[oldId] || "";
+                        }
+                    });
+                };
+                reMapIds(clone.blocks);
+                reMapIds(clone.leftBlocks);
+                reMapIds(clone.rightBlocks);
+                d.sections.splice(sIdx + 1, 0, clone);
+            });
+
             const removeSection = (sIdx) => updateData(d => { d.sections.splice(sIdx, 1); });
             const moveSection = (sIdx, dir) => updateData(d => {
                 if (dir === -1 && sIdx > 0) [d.sections[sIdx-1], d.sections[sIdx]] = [d.sections[sIdx], d.sections[sIdx-1]];
@@ -242,7 +287,19 @@
 
             const handleDownloadJson = () => {
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ ...worksheetData, defaultPageBreaks: pageBreaks }, null, 2));
-                const a = document.createElement('a'); a.href = dataStr; a.download = "worksheet_config.json"; a.click();
+                const a = document.createElement('a'); a.href = dataStr; a.download = `worksheet_${Date.now()}.json`; a.click();
+            };
+
+            const resetBoxHeights = () => {
+                const newHeights = {};
+                const process = (blocks) => {
+                    if(!blocks) return;
+                    blocks.forEach(b => { if(b.type === 'write_box') newHeights[b.boxId] = b.defaultHeight || 120; });
+                };
+                worksheetData.sections.forEach(s => {
+                    process(s.blocks); process(s.leftBlocks); process(s.rightBlocks);
+                });
+                setBoxHeights(newHeights);
             };
 
             const renderTextWithBlanks = (text) => {
@@ -252,10 +309,9 @@
                     const match = part.match(/\{\{([^}]+)\}\}/);
                     if (match) {
                         const key = match[1];
-                        return <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline' : 'border-b border-gray-400 px-10'}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[key]) || '') : ''}</span>;
+                        return <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline decoration-red-300' : 'border-b border-gray-400 px-10'}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[key]) || '') : ''}</span>;
                     }
                     
-                    // LaTeX parser
                     const mathParts = part.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
                     return (
                         <span key={i}>
@@ -266,18 +322,16 @@
                                         try {
                                             const html = window.katex.renderToString(math, { displayMode: true, throwOnError: false });
                                             return <span key={j} dangerouslySetInnerHTML={{ __html: html }} />;
-                                        } catch (e) { console.error(e); }
+                                        } catch (e) { return <span key={j}>{mathPart}</span>; }
                                     }
-                                    return <span key={j}>{mathPart}</span>;
                                 } else if (mathPart.startsWith('$') && mathPart.endsWith('$')) {
                                     const math = mathPart.slice(1, -1);
                                     if (window.katex) {
                                         try {
                                             const html = window.katex.renderToString(math, { displayMode: false, throwOnError: false });
                                             return <span key={j} dangerouslySetInnerHTML={{ __html: html }} />;
-                                        } catch (e) { console.error(e); }
+                                        } catch (e) { return <span key={j}>{mathPart}</span>; }
                                     }
-                                    return <span key={j}>{mathPart}</span>;
                                 }
                                 return <span key={j}>{mathPart}</span>;
                             })}
@@ -288,66 +342,131 @@
 
             const renderBlock = (sIdx, bIdx, block, col = 'blocks') => {
                 if (mode === 'edit') {
+                    const info = blockInfo[block.type] || { label: block.type, icon: 'box' };
                     return (
-                        <div key={bIdx} className="edit-border mb-3 relative font-sans group/edit shadow-sm">
-                            <div className="absolute top-1 right-1 flex gap-1 opacity-20 group-hover/edit:opacity-100 transition">
-                                <button onClick={() => moveBlock(sIdx, bIdx, -1, col)} className="p-1 bg-white border rounded hover:bg-slate-100 flex items-center justify-center w-6 h-6"><Icon name="arrow-up" size={12}/></button>
-                                <button onClick={() => moveBlock(sIdx, bIdx, 1, col)} className="p-1 bg-white border rounded hover:bg-slate-100 flex items-center justify-center w-6 h-6"><Icon name="arrow-down" size={12}/></button>
-                                <button onClick={() => removeBlock(sIdx, bIdx, col)} className="p-1 bg-red-100 text-red-600 border border-red-200 rounded hover:bg-red-200 flex items-center justify-center w-6 h-6"><Icon name="trash-2" size={12}/></button>
-                            </div>
-                            <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold uppercase mb-1.5 inline-block">{block.type}</span>
+                        <div key={bIdx} className="mb-4 relative font-sans bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             
-                            {block.type === 'text' && (
-                                <div className="space-y-2">
-                                    <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border rounded p-1.5 text-xs" rows="2" placeholder="穴埋めは {{キー名}}"></textarea>
-                                    <div className="flex flex-wrap items-center gap-3 text-[10px]">
-                                        <label className="flex items-center gap-1"><input type="checkbox" checked={!!block.bold} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bold = e.target.checked)} /> 太字</label>
-                                        <select value={block.fontSize || 'text-base'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].fontSize = e.target.value)} className="border rounded px-1 bg-white">
-                                            <option value="text-xs">最小</option><option value="text-sm">小</option><option value="text-base">標準</option><option value="text-lg">大</option><option value="text-xl">特大</option>
-                                        </select>
-                                        <select value={block.textAlign || 'text-left'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].textAlign = e.target.value)} className="border rounded px-1 bg-white">
-                                            <option value="text-left">左</option><option value="text-center">中</option><option value="text-right">右</option>
-                                        </select>
+                            {/* ブロックヘッダー（操作メニュー） */}
+                            <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
+                                <div className="flex items-center gap-1.5 text-blue-600">
+                                    <Icon name={info.icon} size={16} />
+                                    <span className="text-xs font-bold">{info.label}</span>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button onClick={() => moveBlock(sIdx, bIdx, -1, col)} className="p-1.5 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600 shadow-sm active:scale-95" title="上へ移動"><Icon name="chevron-up" size={14}/></button>
+                                    <button onClick={() => moveBlock(sIdx, bIdx, 1, col)} className="p-1.5 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600 shadow-sm active:scale-95" title="下へ移動"><Icon name="chevron-down" size={14}/></button>
+                                    <button onClick={() => cloneBlock(sIdx, bIdx, col)} className="p-1.5 bg-white border border-blue-300 text-blue-600 rounded hover:bg-blue-50 shadow-sm ml-2 active:scale-95" title="複製"><Icon name="copy" size={14}/></button>
+                                    <button onClick={() => removeBlock(sIdx, bIdx, col)} className="p-1.5 bg-red-50 text-red-600 border border-red-300 rounded hover:bg-red-100 shadow-sm active:scale-95" title="削除"><Icon name="x" size={14}/></button>
+                                </div>
+                            </div>
+                            
+                            <div className="p-4">
+                                {block.type === 'text' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">文章（穴埋め部分は {'{{答え}}'} で囲む）</label>
+                                            <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none resize-y" rows="2" placeholder="文章を入力"></textarea>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-3 text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
+                                            <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-700 p-1 hover:bg-slate-200 rounded transition-colors">
+                                                <input type="checkbox" checked={!!block.bold} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bold = e.target.checked)} className="rounded w-4 h-4 text-blue-600" /> 太字
+                                            </label>
+                                            <div className="h-5 w-px bg-slate-300 hidden sm:block"></div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-500 font-bold"><Icon name="type" size={14} className="inline"/> サイズ:</span>
+                                                <select value={block.fontSize || 'text-base'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].fontSize = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200">
+                                                    <option value="text-xs">極小</option><option value="text-sm">小</option><option value="text-base">標準</option><option value="text-lg">大</option><option value="text-xl">特大</option>
+                                                </select>
+                                            </div>
+                                            <div className="h-5 w-px bg-slate-300 hidden sm:block"></div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-slate-500 font-bold"><Icon name="align-left" size={14} className="inline"/> 配置:</span>
+                                                <select value={block.textAlign || 'text-left'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].textAlign = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200">
+                                                    <option value="text-left">左</option><option value="text-center">中央</option><option value="text-right">右</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                            {block.type === 'bullets' && <textarea value={(block.items || []).join('\n')} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].items = e.target.value.split('\n'))} className="w-full border rounded p-1.5 text-xs" rows="2" placeholder="改行で区切る"></textarea>}
-                            {block.type === 'fill_in_box' && (
-                                <div className="space-y-1">
-                                    <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border rounded p-1 text-xs" placeholder="問い" />
-                                    <input value={(worksheetData.answers && worksheetData.answers[block.answerKey]) || ''} onChange={e => updateAnswer(block.answerKey, e.target.value)} className="w-full border rounded p-1 text-xs bg-red-50" placeholder="解答" />
-                                </div>
-                            )}
-                            {block.type === 'keywords' && <input value={(block.words || []).join(', ')} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].words = e.target.value.split(',').map(s=>s.trim()))} className="w-full border rounded p-1 text-xs" placeholder="語句1, 語句2" />}
-                            {block.type === 'quote' && <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border rounded p-1.5 text-xs" rows="2"></textarea>}
-                            {block.type === 'write_box' && (
-                                <div className="space-y-1">
-                                    <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border rounded p-1 text-xs" placeholder="記述の問い" />
-                                    <textarea value={(worksheetData.answers && worksheetData.answers[block.boxId]) || ''} onChange={e => updateAnswer(block.boxId, e.target.value)} className="w-full border rounded p-1.5 text-xs bg-red-50" rows="1" placeholder="解答例"></textarea>
-                                </div>
-                            )}
-                            {block.type === 'self_eval' && <div className="text-[10px] text-slate-400">自己評価ブロック</div>}
+                                )}
+                                
+                                {block.type === 'bullets' && (
+                                    <div className="space-y-3">
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">リスト項目（穴埋め部分は {'{{答え}}'} で囲む）</label>
+                                        {(block.items || []).map((item, i) => (
+                                            <div key={i} className="flex gap-2 items-center">
+                                                <input value={item} onChange={e => updateData(d => { d.sections[sIdx][col][bIdx].items[i] = e.target.value; })} className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
+                                                <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.splice(i, 1); })} className="text-rose-500 hover:text-rose-700 p-2 bg-rose-50 rounded-lg active:scale-95"><Icon name="minus-circle" size={18}/></button>
+                                            </div>
+                                        ))}
+                                        <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.push("新項目"); })} className="text-blue-600 text-sm font-bold flex items-center gap-1.5 p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg w-max transition-colors active:scale-95"><Icon name="plus-circle" size={18}/> 項目を追加</button>
+                                    </div>
+                                )}
+
+                                {block.type === 'fill_in_box' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">問いの文章</label>
+                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="問いの内容" />
+                                        </div>
+                                        <div className="flex items-center gap-3 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
+                                            <span className="font-bold text-red-600 shrink-0">答え:</span>
+                                            <input value={(worksheetData.answers && worksheetData.answers[block.answerKey]) || ''} onChange={e => updateAnswer(block.answerKey, e.target.value)} className="flex-1 border-b-2 border-red-300 bg-transparent outline-none focus:border-red-500 py-1 font-bold text-red-800" placeholder="正解を入力" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {block.type === 'write_box' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">記述の問い</label>
+                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="記述の問い" />
+                                        </div>
+                                        <div className="flex flex-col gap-2 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
+                                            <span className="font-bold text-red-600 text-[10px] uppercase">模範解答例:</span>
+                                            <textarea value={(worksheetData.answers && worksheetData.answers[block.boxId]) || ''} onChange={e => updateAnswer(block.boxId, e.target.value)} className="w-full border border-red-200 rounded-lg p-3 bg-white outline-none focus:ring-2 focus:ring-red-300 text-red-700 font-bold" rows="3" placeholder="解答例を入力"></textarea>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {block.type === 'keywords' && (
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">語句（カンマで区切る）</label>
+                                        <input value={(block.words || []).join(', ')} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].words = e.target.value.split(',').map(s=>s.trim()))} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="語句1, 語句2..." />
+                                    </div>
+                                )}
+                                
+                                {block.type === 'quote' && (
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">引用文</label>
+                                        <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none" rows="3" placeholder="引用文を入力"></textarea>
+                                    </div>
+                                )}
+                                
+                                {block.type === 'self_eval' && <div className="text-xs text-slate-400 font-bold bg-slate-100 p-3 rounded-lg text-center">（学習の振り返り枠：設定項目はありません）</div>}
+                            </div>
                         </div>
                     );
                 }
 
                 switch (block.type) {
-                    case 'text': return <p key={bIdx} className={`mb-4 ${block.bold ? 'font-bold text-gray-700' : 'text-gray-800'} ${block.fontSize || 'text-base'} ${block.textAlign || 'text-left'} leading-relaxed`}>{renderTextWithBlanks(block.content || '')}</p>;
-                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1 text-slate-400">・</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
-                    case 'fill_in_box': return <div key={bIdx} className="mt-4 mb-4"><label className="block text-sm font-bold mb-2 italic">{block.label || ''}</label><div className="border-4 border-double border-gray-400 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[block.answerKey]) || '') : '　　　　　'}</span> ）</div></div>;
-                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">キーワード</span><div className="flex flex-wrap gap-2">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-700 bg-white px-2 py-0.5 rounded border shadow-sm">{w}</span>)}</div></div>;
-                    case 'quote': return <div key={bIdx} className="bg-blue-50 p-4 rounded-xl border-l-8 border-blue-400 text-sm italic leading-loose shadow-sm mb-4">{block.content || ''}</div>;
-                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-4"><p className="font-bold text-base leading-relaxed">{block.label || ''}</p><div className="write-box p-4 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 120}px`, backgroundImage: 'linear-gradient(to bottom, transparent 95%, #f1f5f9 95%)', backgroundSize: '100% 1.4em' }}>{mode === 'teacher' && <span className="text-red-600">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 p-1 rounded font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-30)}))} className="bg-slate-200 rounded p-1 hover:bg-slate-300 flex items-center justify-center w-6 h-6"><Icon name="minus" size={14}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: (p[block.boxId]||120)+30}))} className="bg-slate-200 rounded p-1 hover:bg-slate-300 flex items-center justify-center w-6 h-6"><Icon name="plus" size={14}/></button></div></div></div>;
-                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-4 mb-2 font-sans"><div className="text-xs text-slate-400 font-bold flex gap-4"><span>自己評価： Ａ ・ Ｂ ・ Ｃ</span></div><div className="border-2 border-slate-300 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-white rounded-lg"><span className="font-bold text-slate-400">確認印</span></div></div>;
+                    case 'text': return <div key={bIdx} className={`mb-4 ${block.bold ? 'font-bold text-slate-800' : 'text-slate-700'} ${block.fontSize || 'text-base'} ${block.textAlign || 'text-left'} leading-relaxed`}>{renderTextWithBlanks(block.content || '')}</div>;
+                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1.5 text-slate-300">●</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
+                    case 'fill_in_box': return <div key={bIdx} className="mt-4 mb-4"><label className="block text-sm font-bold mb-2 text-slate-500 italic">{block.label || ''}</label><div className="border-4 border-double border-slate-300 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[block.answerKey]) || '') : '　　　　　'}</span> ）</div></div>;
+                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">ヒント語群</span><div className="flex flex-wrap gap-2">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">{w}</span>)}</div></div>;
+                    case 'quote': return <div key={bIdx} className="bg-blue-50/50 p-5 rounded-2xl border-l-8 border-blue-200 text-sm italic leading-loose mb-6 text-slate-600">{block.content || ''}</div>;
+                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-6"><p className="font-bold text-base text-slate-800 leading-relaxed">{block.label || ''}</p><div className="write-box p-5 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 120}px`, backgroundImage: 'linear-gradient(to bottom, transparent 95%, #f4f7fa 95%)', backgroundSize: '100% 1.4em' }}>{mode === 'teacher' && <span className="text-red-600 block fade-in">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/95 p-1.5 rounded-xl border shadow-md font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-28)}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="minus" size={16}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: (p[block.boxId]||120)+28}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="plus" size={16}/></button></div></div></div>;
+                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-8 mb-2 font-sans border-t border-slate-100 pt-6"><div className="text-[10px] text-slate-400 font-bold flex gap-4"><span>学習のふり返り： 満足(A) ・ おおむね満足(B) ・ もう少し(C)</span></div><div className="border-2 border-slate-200 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-slate-50 rounded-lg"><span className="font-bold text-slate-300">確認印</span></div></div>;
                     default: return null;
                 }
             };
 
             const renderAddButtons = (sIdx, col) => (
-                <div className="mt-2 p-2 bg-slate-50 border border-dashed border-slate-300 rounded flex flex-wrap gap-1 items-center font-sans no-print">
-                    <span className="text-[10px] font-bold text-slate-400 mr-1">追加:</span>
-                    {['text', 'bullets', 'fill_in_box', 'keywords', 'write_box'].map(type => (
-                        <button key={type} onClick={()=>addBlock(sIdx, type, col)} className="text-[9px] bg-white border px-1.5 py-0.5 rounded hover:bg-slate-100">{type.replace('_box', '')}</button>
+                <div className="mt-4 p-4 bg-blue-50/50 border border-dashed border-blue-200 rounded-2xl flex flex-wrap gap-2 items-center font-sans no-print justify-center sm:justify-start">
+                    <span className="text-xs font-bold text-blue-500 mr-2 flex items-center gap-1.5"><Icon name="plus-circle" size={18}/> ブロック追加:</span>
+                    {Object.entries(blockInfo).map(([type, info]) => (
+                        <button key={type} onClick={()=>addBlock(sIdx, type, col)} className="text-xs font-bold text-slate-600 bg-white border border-blue-200 px-3 py-2 rounded-xl shadow-sm hover:bg-blue-50 hover:text-blue-600 transition-colors active:scale-95 flex items-center gap-1.5">
+                            <Icon name={info.icon} size={14} /> {info.label}
+                        </button>
                     ))}
                 </div>
             );
@@ -365,119 +484,214 @@
 
             return (
                 <div className="p-4 sm:p-8 no-print-bg">
-                    {/* 操作パネル */}
-                    <div className="max-w-6xl mx-auto mb-8 bg-white p-4 rounded-2xl shadow-xl no-print border-b-4 border-slate-300 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex flex-col">
-                            <h1 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="columns" className="text-blue-600" /> ワークシート職人 V5</h1>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">2-Column Layout Support</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-4">
-                            <div className="flex bg-slate-100 p-1 rounded-xl">
-                                {['student', 'teacher', 'edit'].map(m => (
-                                    <button key={m} onClick={() => setMode(m)} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === m ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>
-                                        {m === 'student' ? '生徒用' : m === 'teacher' ? '解答付' : '編集'}
-                                    </button>
-                                ))}
-                            </div>
-                            {mode === 'edit' && (
-                                <div className="flex gap-1 bg-emerald-50 p-1 rounded-xl border border-emerald-100">
-                                    <button onClick={handleUndo} disabled={historyIndex === 0} className={`p-1.5 rounded-lg transition flex items-center justify-center w-8 h-8 ${historyIndex === 0 ? 'text-emerald-200 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-100'}`} title="Undo"><Icon name="undo" size={16}/></button>
-                                    <button onClick={handleRedo} disabled={historyIndex === history.length - 1} className={`p-1.5 rounded-lg transition flex items-center justify-center w-8 h-8 ${historyIndex === history.length - 1 ? 'text-emerald-200 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-100'}`} title="Redo"><Icon name="redo" size={16}/></button>
+                    
+                    {/* ヘルプモーダル */}
+                    {showHelp && (
+                        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="help-circle" className="text-blue-500"/> 使い方ガイド</h2>
+                                    <button onClick={() => setShowHelp(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
                                 </div>
-                            )}
-                            <div className="flex gap-2">
-                                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
-                                <button onClick={() => fileInputRef.current.click()} className="px-3 py-1.5 bg-slate-100 rounded-lg text-sm font-bold text-slate-600 flex items-center gap-1 hover:bg-slate-200"><Icon name="upload" size={14}/>読込</button>
-                                <button onClick={handleDownloadJson} className="px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm font-bold text-blue-600 flex items-center gap-1 hover:bg-blue-100"><Icon name="download" size={14}/>保存</button>
+                                <div className="p-6 overflow-y-auto space-y-8 text-sm text-slate-700 leading-relaxed">
+                                    <section>
+                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="layout" size={20}/> ３つのモード</h3>
+                                        <ul className="list-disc pl-5 space-y-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                            <li><b className="text-slate-800">生徒用：</b> 印刷して生徒に配るための白紙の状態です。</li>
+                                            <li><b className="text-red-600">解答付：</b> 赤字で解答が入り、先生用の控えや配布用の解答用紙になります。</li>
+                                            <li><b className="text-emerald-600">編集モード：</b> 設問の追加・削除、テキストの書き換えなど、ワークシートを自由にカスタマイズできます。</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="edit-3" size={20}/> 編集のコツ</h3>
+                                        <ul className="list-disc pl-5 space-y-2">
+                                            <li>テキストの中で <code>{`{{任意の文字}}`}</code> と書くと、自動的に穴埋め問題になります。（例： <code>{`日本の首都は{{東京}}です。`}</code>）</li>
+                                            <li>各ブロックの右上にあるボタンで、移動 <Icon name="chevron-up" size={14} className="inline text-slate-400"/>・複製 <Icon name="copy" size={14} className="inline text-slate-400"/>・削除 <Icon name="x" size={14} className="inline text-slate-400"/> ができます。</li>
+                                            <li>大問ごとに「1カラム」か「2カラム（左右分割）」かを選べます。</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="move-vertical" size={20}/> 記述枠のサイズ調整</h3>
+                                        <ul className="list-disc pl-5 space-y-2">
+                                            <li>「生徒用」または「解答付」モードの時、記述枠の右下にある ＋/－ ボタンを押すと、枠の高さを自由に調整できます。</li>
+                                            <li>操作パネルの <Icon name="maximize" size={14} className="inline bg-amber-50 text-amber-600 p-0.5 rounded border border-amber-200" /> ボタンを押すと、すべての枠の高さを初期状態にリセットできます。</li>
+                                        </ul>
+                                    </section>
+                                    <section>
+                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="save" size={20}/> 保存と読み込み</h3>
+                                        <ul className="list-disc pl-5 space-y-2">
+                                            <li>作成したワークシートは「保存」ボタンからJSONファイルとしてPCに保存できます。</li>
+                                            <li>別の日に編集を再開したい時や、他の先生と共有したい時は「読込」ボタンからそのファイルを開いてください。</li>
+                                        </ul>
+                                    </section>
+                                </div>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+                                    <button onClick={() => setShowHelp(false)} className="bg-slate-800 text-white font-bold px-10 py-3 rounded-xl hover:bg-slate-900 transition-colors shadow-lg active:scale-95">理解しました</button>
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex gap-2">
-                            <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white">
-                                {fontOptions.map(font => <option key={font.value} value={font.value}>{font.label}</option>)}
-                            </select>
-                            <select value={paperSize} onChange={(e) => setPaperSize(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white">
-                                <option value="A4">A4</option><option value="B5">B5</option>
-                            </select>
-                            <button onClick={() => { window.focus(); setTimeout(()=>window.print(), 50); }} className="bg-slate-800 text-white px-5 py-1.5 rounded-xl font-bold shadow-lg hover:bg-slate-700 active:scale-95 transition"><Icon name="printer" size={14}/>印刷</button>
+                    {/* 操作パネル */}
+                    {isPanelOpen ? (
+                        <div className="max-w-6xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-3xl shadow-2xl no-print border border-slate-200 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-5 relative transition-all duration-300">
+                            
+                            {/* パネルを閉じるボタン */}
+                            <button 
+                                onClick={() => setIsPanelOpen(false)} 
+                                className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-2 shadow-lg hover:bg-slate-700 transition-colors z-50"
+                                title="パネルを隠す"
+                            >
+                                <Icon name="chevron-up" size={18} />
+                            </button>
+
+                            <div className="flex flex-col">
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9</h1>
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">Card UI Editor</span>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner">
+                                    {['student', 'teacher', 'edit'].map(m => (
+                                        <button key={m} onClick={() => setMode(m)} className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 ${mode === m ? 'bg-white shadow-md text-blue-600 scale-[1.02]' : 'text-slate-500 hover:text-slate-700'}`}>
+                                            {m === 'student' ? '生徒用' : m === 'teacher' ? '解答付' : '編集モード'}
+                                        </button>
+                                    ))}
+                                </div>
+                                
+                                <div className="hidden sm:block w-px h-10 bg-slate-200 mx-2"></div>
+
+                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
+                                    <button onClick={() => fileInputRef.current.click()} className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-95 transition-transform"><Icon name="folder-open" size={16}/>読込</button>
+                                    <button onClick={handleDownloadJson} className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-100 active:scale-95 transition-transform"><Icon name="save" size={16}/>保存</button>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                                <button onClick={() => setShowHelp(true)} className="p-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl hover:bg-indigo-100 flex items-center justify-center transition-colors shadow-sm" title="使い方ガイド"><Icon name="help-circle" size={18}/></button>
+                                
+                                {mode === 'edit' && (
+                                    <div className="flex gap-2 mr-2">
+                                        <button onClick={handleUndo} disabled={historyIndex === 0} className={`p-2.5 rounded-xl border transition flex items-center justify-center ${historyIndex === 0 ? 'bg-slate-50 text-slate-300 border-slate-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm active:scale-95'}`} title="元に戻す"><Icon name="undo-2" size={18}/></button>
+                                        <button onClick={handleRedo} disabled={historyIndex === history.length - 1} className={`p-2.5 rounded-xl border transition flex items-center justify-center ${historyIndex === history.length - 1 ? 'bg-slate-50 text-slate-300 border-slate-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm active:scale-95'}`} title="やり直す"><Icon name="redo-2" size={18}/></button>
+                                        <button onClick={resetBoxHeights} className="p-2.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-xl hover:bg-amber-100 flex items-center justify-center shadow-sm active:scale-95" title="枠のサイズを初期化"><Icon name="maximize" size={18}/></button>
+                                    </div>
+                                )}
+                                <div className="flex gap-2">
+                                    <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-blue-100 shadow-sm cursor-pointer">
+                                        {fontOptions.map(font => <option key={font.value} value={font.value}>{font.label}</option>)}
+                                    </select>
+                                    <select value={paperSize} onChange={(e) => setPaperSize(e.target.value)} className="border border-slate-300 rounded-xl px-3 py-2.5 text-xs sm:text-sm font-bold bg-white outline-none focus:ring-2 focus:ring-blue-100 shadow-sm cursor-pointer">
+                                        <option value="A4">A4</option><option value="B5">B5</option>
+                                    </select>
+                                </div>
+                                <button onClick={() => { window.focus(); setTimeout(()=>window.print(), 50); }} className="bg-slate-800 text-white px-6 sm:px-8 py-2.5 rounded-xl font-bold shadow-xl flex items-center gap-2 hover:bg-slate-900 active:scale-95 transition-all w-full sm:w-auto justify-center"><Icon name="printer" size={18}/>印刷</button>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="max-w-6xl mx-auto mb-8 no-print sticky top-4 z-50 flex justify-center">
+                            <button 
+                                onClick={() => setIsPanelOpen(true)} 
+                                className="bg-slate-800 text-white px-6 py-2.5 rounded-full font-bold shadow-xl flex items-center gap-2 hover:bg-slate-900 active:scale-95 transition-all opacity-80 hover:opacity-100"
+                            >
+                                <Icon name="settings" size={18} /> 操作パネルを表示 <Icon name="chevron-down" size={18} />
+                            </button>
+                        </div>
+                    )}
 
-                    <div className="flex flex-col items-center gap-8 pb-20">
+                    <div className="flex flex-col items-center gap-12 pb-32">
                         {getPages().map((pageSections, pageIdx) => (
                             <div 
                                 key={pageIdx}
-                                className={`bg-white shadow-2xl relative worksheet-page transition-all duration-300
+                                className={`bg-white shadow-2xl relative worksheet-page transition-all duration-500
                                   ${paperSize === 'A4' ? 'w-[210mm] min-h-[297mm]' : 'w-[182mm] min-h-[257mm]'}
-                                  ${overflows[pageIdx] ? 'ring-4 ring-red-400' : ''}
+                                  ${overflows[pageIdx] ? 'ring-4 ring-red-400 ring-offset-4 ring-offset-slate-100' : ''}
                                   print:shadow-none print:m-0 print:break-after-page
                                 `}
                                 style={{ fontFamily: fontOptions.find(f => f.value === selectedFont).family }}
                             >
                                 <div className="absolute -left-16 top-0 no-print flex flex-col items-center gap-1 font-sans">
-                                    <span className="bg-slate-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg">{pageIdx + 1}</span>
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Page</span>
+                                    <span className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg text-lg">{pageIdx + 1}</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page</span>
                                 </div>
 
-                                {mode === 'teacher' && <div className="absolute top-6 right-8 border-2 border-red-600 text-red-600 px-6 py-1 rounded-full font-black text-2xl rotate-[-5deg] z-50 opacity-30 select-none pointer-events-none">解答例</div>}
-
-                                <div className="p-12 page-content h-full">
+                                <div className="p-12 sm:p-16 page-content h-full">
+                                    {/* タイトル領域 */}
                                     {pageIdx === 0 && (
-                                        <div className="mb-8 border-b-2 border-black pb-3">
+                                        <div className="mb-10 border-b-4 border-slate-800 pb-4 relative">
                                             {mode === 'edit' ? (
-                                                <input value={worksheetData.title || ''} onChange={e => updateData(d => d.title = e.target.value)} className="w-full text-2xl font-black text-center border-b-2 border-emerald-300 outline-none bg-emerald-50 px-2" placeholder="ワークシートのタイトル" />
+                                                <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                                                    <label className="block text-xs font-bold text-blue-600 mb-2 text-center">ワークシートのタイトル</label>
+                                                    <input value={worksheetData.title || ''} onChange={e => updateData(d => d.title = e.target.value)} className="w-full text-2xl sm:text-3xl font-black text-center border border-slate-300 bg-white rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-200 shadow-sm transition-shadow" placeholder="タイトルを入力" />
+                                                </div>
                                             ) : (
-                                                <h2 className="text-2xl font-black text-center leading-relaxed">{worksheetData.title || ''}</h2>
+                                                <h2 className="text-2xl sm:text-3xl font-black text-center leading-tight text-slate-800">{worksheetData.title || ''}</h2>
                                             )}
+                                            <div className="absolute -bottom-1 left-0 w-1/4 h-1 bg-slate-800"></div>
                                         </div>
                                     )}
 
+                                    {/* 各セクション */}
                                     {pageSections.map((section) => {
                                         const sIdx = worksheetData.sections.findIndex(s => s.id === section.id);
                                         const is2Col = section.layout === '2-col';
                                         
                                         return (
-                                            <div key={section.id} className={`relative mb-10 ${mode === 'edit' ? 'border-2 border-emerald-200 rounded-xl p-4 bg-white mb-12' : ''}`}>
+                                            <div key={section.id} className={`relative mb-12 ${mode === 'edit' ? 'border-2 border-dashed border-emerald-300 rounded-3xl p-4 sm:p-6 bg-emerald-50/30 mb-16' : ''}`}>
                                                 
                                                 {mode === 'edit' && (
-                                                    <div className="absolute -top-3 right-4 flex gap-1 font-sans z-10">
-                                                        <button onClick={() => toggleLayout(sIdx)} className={`px-2 py-0.5 border rounded shadow-sm text-xs flex items-center gap-1 ${is2Col ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-300'}`}>
-                                                            <Icon name={is2Col ? 'rows' : 'columns'} size={12}/> {is2Col ? '1段に戻す' : '2段にする'}
-                                                        </button>
-                                                        <button onClick={() => moveSection(sIdx, -1)} className="bg-white border border-slate-300 text-slate-600 px-2 py-0.5 rounded shadow-sm text-xs hover:bg-slate-50 flex items-center justify-center"><Icon name="arrow-up" size={12}/></button>
-                                                        <button onClick={() => moveSection(sIdx, 1)} className="bg-white border border-slate-300 text-slate-600 px-2 py-0.5 rounded shadow-sm text-xs hover:bg-slate-50 flex items-center justify-center"><Icon name="arrow-down" size={12}/></button>
-                                                        <button onClick={() => removeSection(sIdx)} className="bg-red-500 text-white px-2 py-0.5 rounded shadow-sm text-xs hover:bg-red-600 flex items-center gap-1"><Icon name="trash-2" size={12}/> 削除</button>
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-6 bg-white p-3 rounded-2xl border border-emerald-200 shadow-sm font-sans">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider">大問 {sIdx + 1}</span>
+                                                            <button onClick={() => toggleLayout(sIdx)} className={`px-3 py-1.5 border rounded-lg shadow-sm text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${is2Col ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                                                                <Icon name={is2Col ? 'layout-list' : 'columns'} size={14}/> <span className="hidden sm:inline">{is2Col ? '1カラムに戻す' : '2カラムにする'}</span>
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex gap-1.5">
+                                                            <button onClick={() => moveSection(sIdx, -1)} className="bg-white border border-slate-200 text-slate-600 p-2 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95" title="大問を上へ"><Icon name="arrow-up" size={16}/></button>
+                                                            <button onClick={() => moveSection(sIdx, 1)} className="bg-white border border-slate-200 text-slate-600 p-2 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95" title="大問を下へ"><Icon name="arrow-down" size={16}/></button>
+                                                            <button onClick={() => cloneSection(sIdx)} className="bg-white border border-blue-200 text-blue-600 p-2 rounded-lg shadow-sm hover:bg-blue-50 active:scale-95 ml-2" title="大問を複製"><Icon name="copy" size={16}/></button>
+                                                            <button onClick={() => removeSection(sIdx)} className="bg-rose-50 text-rose-600 border border-rose-200 p-2 rounded-lg shadow-sm hover:bg-rose-100 active:scale-95" title="大問を削除"><Icon name="trash-2" size={16}/></button>
+                                                        </div>
                                                     </div>
                                                 )}
 
-                                                <div className="flex items-start justify-between mb-4 pb-2 border-b-2 border-slate-100">
+                                                <div className="flex items-start justify-between mb-6 pb-2 border-b-2 border-slate-800/10 mt-2 sm:mt-0">
                                                     <div className="flex-1">
                                                         {mode === 'edit' ? (
-                                                            <div className="space-y-2 w-full pr-4">
-                                                                <input value={section.title || ''} onChange={e => updateData(d => d.sections[sIdx].title = e.target.value)} className="w-full text-xl font-black border-b border-dashed border-emerald-300 bg-emerald-50 outline-none" placeholder="タイトル" />
-                                                                <input value={section.criteria || ''} onChange={e => updateData(d => d.sections[sIdx].criteria = e.target.value)} className="w-full text-xs text-slate-500 border-b border-dashed border-emerald-300 bg-emerald-50 outline-none" placeholder="評価規準" />
+                                                            <div className="space-y-3 w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-4">
+                                                                <div>
+                                                                    <label className="block text-xs font-bold text-slate-500 mb-1.5">大問のタイトル</label>
+                                                                    <input value={section.title || ''} onChange={e => updateData(d => d.sections[sIdx].title = e.target.value)} className="w-full text-lg sm:text-xl font-black border border-slate-300 bg-slate-50 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-300 focus:bg-white transition-colors" placeholder="見出しを入力" />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-xs font-bold text-slate-500 mb-1.5">評価規準</label>
+                                                                    <input value={section.criteria || ''} onChange={e => updateData(d => d.sections[sIdx].criteria = e.target.value)} className="w-full text-sm text-slate-600 font-bold border border-slate-300 bg-slate-50 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-300 focus:bg-white transition-colors" placeholder="評価の視点（例：【知技】〇〇を理解している）" />
+                                                                </div>
                                                             </div>
                                                         ) : (
-                                                            <>
-                                                                <h3 className="text-xl font-black flex items-center gap-3">
-                                                                    <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-xl text-base font-sans">{sIdx + 1}</span>
-                                                                    {section.title || ''}
-                                                                </h3>
-                                                                <span className="text-[10px] font-bold text-slate-400 no-print italic block mt-1 ml-11 tracking-wider uppercase opacity-75">[{section.criteria || ''}]</span>
-                                                            </>
+                                                            <div className="flex items-center gap-3 sm:gap-4">
+                                                                <div className="bg-slate-800 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-xl font-sans font-black shadow-lg shadow-slate-200 shrink-0">
+                                                                    {sIdx + 1}
+                                                                </div>
+                                                                <div>
+                                                                    <h3 className="text-lg sm:text-xl font-black text-slate-800">{section.title || ''}</h3>
+                                                                    <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1 opacity-90">[{section.criteria || ''}]</span>
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
                                                 
-                                                <div className={`rounded-xl transition-colors ${mode === 'teacher' ? 'bg-red-50/20' : ''}`}>
+                                                <div className="transition-all duration-300">
                                                     {is2Col ? (
-                                                        <div className="grid grid-cols-2 gap-8 print:gap-8 relative">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 print:grid-cols-2 print:gap-10 relative">
                                                             <div className="flex flex-col">
                                                                 {(section.leftBlocks || []).map((block, bIdx) => renderBlock(sIdx, bIdx, block, 'leftBlocks'))}
                                                                 {mode === 'edit' && renderAddButtons(sIdx, 'leftBlocks')}
                                                             </div>
-                                                            <div className="flex flex-col column-divider border-slate-200">
+                                                            <div className="flex flex-col md:column-divider print:column-divider border-slate-200 pt-6 md:pt-0 print:pt-0 border-t border-dashed md:border-t-0 print:border-t-0">
                                                                 {(section.rightBlocks || []).map((block, bIdx) => renderBlock(sIdx, bIdx, block, 'rightBlocks'))}
                                                                 {mode === 'edit' && renderAddButtons(sIdx, 'rightBlocks')}
                                                             </div>
@@ -491,8 +705,8 @@
                                                 </div>
 
                                                 {mode !== 'edit' && sIdx < worksheetData.sections.length - 1 && (
-                                                    <button onClick={() => togglePageBreak(section.id)} className={`absolute -bottom-8 left-1/2 -translate-x-1/2 no-print px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-2 transition-all z-30 shadow-md font-sans ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:scale-105 active:scale-95'}`}>
-                                                        <Icon name="scissors" size={14}/>{pageBreaks.includes(section.id) ? '改ページ解除' : 'ここで次頁へ'}
+                                                    <button onClick={() => togglePageBreak(section.id)} className={`absolute -bottom-10 left-1/2 -translate-x-1/2 no-print px-5 py-2.5 rounded-full text-xs font-black flex items-center gap-2 transition-all z-30 shadow-xl border-2 active:scale-95 ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white border-rose-600 scale-105' : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:border-slate-300'}`}>
+                                                        <Icon name="scissors" size={16}/>{pageBreaks.includes(section.id) ? '改ページを解除' : 'ここで改ページ'}
                                                     </button>
                                                 )}
                                             </div>
@@ -500,17 +714,19 @@
                                     })}
 
                                     {mode === 'edit' && (
-                                        <div className="mt-8 flex justify-center font-sans pb-10">
-                                            <button onClick={addSection} className="flex items-center gap-2 bg-emerald-100 text-emerald-700 border-2 border-emerald-300 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-emerald-200 transition active:scale-95">
-                                                <Icon name="plus" size={18} /> 新しい大問（セクション）を追加
+                                        <div className="mt-12 flex justify-center font-sans pb-16">
+                                            <button onClick={addSection} className="flex items-center gap-3 bg-slate-800 text-white border-none px-8 py-4 rounded-2xl font-black shadow-2xl hover:bg-slate-900 transition-all active:scale-95 group">
+                                                <Icon name="plus" size={20} className="group-hover:rotate-90 transition-transform" /> 大問（セクション）を新規作成
                                             </button>
                                         </div>
                                     )}
                                 </div>
+                                
+                                {/* ページ溢れ警告 */}
                                 {overflows[pageIdx] && (
-                                    <div className="absolute bottom-6 right-6 no-print flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg font-bold animate-pulse shadow-lg font-sans">
-                                        <Icon name="alert-triangle" size={18}/>
-                                        入りきっていません（枠を狭めるか改ページしてください）
+                                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 no-print flex items-center gap-3 bg-red-600 text-white px-8 py-3 rounded-full font-black shadow-2xl animate-bounce z-[60] border-4 border-white/20">
+                                        <Icon name="alert-circle" size={20}/>
+                                        ページ内容が溢れています
                                     </div>
                                 )}
                             </div>
