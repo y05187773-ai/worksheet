@@ -1,436 +1,292 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Scissors, AlertTriangle, Printer, Plus, Minus, Upload, Download } from 'lucide-react';
-
-// デフォルトのワークシートデータ（JSONのスキーマ見本）
-const defaultData = {
-  title: "内閣のはたらき：ワークシート",
-  defaultPageBreaks: ["s2"],
-  answers: {
-    s1_1: "法律",
-    s1_2: "国会",
-    s1_3: "条約",
-    s1_main: "行政",
-    s2_1: "内閣総理大臣",
-    s2_2: "国務大臣",
-    s2_box: "（例：文部科学省）学校の教科書をつくったり、スポーツをさかんにしたりする仕事をしていると思う。",
-    s3_q1: "薬を安全に使うためのルールが守られないと、国民の健康や安全がそこなわれるおそれがあると考えたから。インターネットだと正しい使い方が伝わりにくい心配があった。",
-    s3_q2: "一番は「国民の安全と健康」を守ること。また、憲法や法律に違反しないように、国民の自由も大切にしながら仕事を行う必要がある。",
-    s4_summary: "内閣は、国会が決めた法律や予算をもとに、私たちの生活を支える「行政」という仕事をしている。厚生労働省の例のように、国民の安全を第一に考えながら、法律の範囲内で正しく判断することが求められている。多くの省がそれぞれの専門分野で動いていることがわかった。"
-  },
-  sections: [
-    {
-      id: "s1",
-      title: "1. 内閣の主な仕事",
-      criteria: "【知技】内閣の役割を理解している。",
-      blocks: [
-        { type: "text", content: "教科書26ページを読んで、内閣がどのような仕事をしているかまとめましょう。", bold: true },
-        { type: "bullets", items: [
-          "国会で決められた（{{s1_1}}）や予算をもとに、実際の仕事を行う。",
-          "予算案や法律案をつくって、（{{s1_2}}）に提出する。",
-          "外国と（{{s1_3}}）を結ぶ。"
-        ]},
-        { type: "fill_in_box", label: "【考えよう】内閣がこれらの仕事を行うことを何といいますか？", answerKey: "s1_main" }
-      ]
-    },
-    {
-      id: "s2",
-      title: "2. 内閣の組織とメンバー",
-      criteria: "【知技】内閣の仕組みを理解している。",
-      blocks: [
-        { type: "text", content: "内閣は、リーダーである（{{s2_1}}）と、各府・省の責任者である（{{s2_2}}）で構成されています。" },
-        { type: "keywords", words: ["国務大臣", "内閣総理大臣", "閣議"] },
-        { type: "write_box", label: "図を見て、気になる「省」を一つ選び、どんな仕事に関係しているか想像して書きましょう。", boxId: "s2_box", defaultHeight: 120 }
-      ]
-    },
-    {
-      id: "s3",
-      title: "3. 私たちの暮らしと「行政」",
-      criteria: "【思判表】行政の働きと国民生活の関係を表現している。",
-      blocks: [
-        { type: "text", content: "教科書27ページの「厚生労働省」の事例から考えましょう。", bold: true },
-        { type: "quote", content: "「厚生労働省は、インターネットでの薬の販売を制限する命令を出しました。しかし裁判所は、その命令を無効とする判決を下しました。」" },
-        { type: "write_box", label: "なぜ厚生労働省は、薬の販売を制限しようとしたのでしょうか？", boxId: "s3_q1", defaultHeight: 150 },
-        { type: "write_box", label: "このように内閣が仕事をする上で、一番大切にすべきことは何だと思いますか？", boxId: "s3_q2", defaultHeight: 180 }
-      ]
-    },
-    {
-      id: "s4",
-      title: "4. 本時のまとめ・振り返り",
-      criteria: "学習のねらいの達成状況",
-      blocks: [
-        { type: "write_box", label: "内閣のはたらきについて、わかったことや考えたことを自由に書きましょう。", boxId: "s4_summary", defaultHeight: 250 },
-        { type: "self_eval" }
-      ]
-    }
-  ]
-};
-
-const App = () => {
-  const [worksheetData, setWorksheetData] = useState(defaultData);
-  const [paperSize, setPaperSize] = useState('B5');
-  const [showGuide, setShowGuide] = useState(true);
-  const [mode, setMode] = useState('student'); 
-  const [pageBreaks, setPageBreaks] = useState(defaultData.defaultPageBreaks || []);
-  const [overflows, setOverflows] = useState({});
-  const [selectedFont, setSelectedFont] = useState('kyokasho');
-  const [boxHeights, setBoxHeights] = useState({});
-  const fileInputRef = useRef(null);
-
-  // JSON読み込み時に枠の高さを初期化する
-  useEffect(() => {
-    const newHeights = {};
-    worksheetData.sections.forEach(section => {
-      section.blocks.forEach(block => {
-        if (block.type === 'write_box') {
-          newHeights[block.boxId] = block.defaultHeight || 100;
-        }
-      });
-    });
-    setBoxHeights(newHeights);
-    setPageBreaks(worksheetData.defaultPageBreaks || []);
-  }, [worksheetData]);
-
-  // フォント定義
-  const fontOptions = [
-    { value: 'kyokasho', label: '教科書体', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
-    { value: 'klee', label: 'Klee One (手書き風)', family: "'Klee One', 'BIZ UDKyokasho', 'Meiryo', sans-serif" },
-    { value: 'gothic', label: 'ゴシック体', family: "'Noto Sans JP', 'Meiryo', sans-serif" },
-    { value: 'mincho', label: '明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" },
-    { value: 'maru', label: '丸ゴシック', family: "'M PLUS Rounded 1c', 'Meiryo', sans-serif" }
-  ];
-
-  // 枠の高さ調整
-  const updateBoxHeight = (boxId, delta) => {
-    setBoxHeights(prev => ({
-      ...prev,
-      [boxId]: Math.max(60, (prev[boxId] || 100) + delta)
-    }));
-  };
-
-  // プレビュー環境での印刷
-  const handlePrint = () => {
-    window.focus();
-    setTimeout(() => window.print(), 50);
-  };
-
-  // ファイル読み込み処理
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
-        if (data.sections && data.answers) {
-          setWorksheetData(data);
-        } else {
-          alert("フォーマットが正しくありません。sectionsとanswersが必要です。");
-        }
-      } catch (err) {
-        alert("JSONファイルの読み込みに失敗しました。ファイルが壊れている可能性があります。");
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = ''; // 連続で同じファイルを読めるようにリセット
-  };
-
-  // 現在のデータをJSONとして保存
-  const handleDownloadJson = () => {
-    const dataToSave = {
-      ...worksheetData,
-      defaultPageBreaks: pageBreaks // 現在の改ページ状態を保存
-    };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToSave, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "worksheet_template.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
-  // 穴埋めテキストのレンダリング {{key}} を解答に置換
-  const renderTextWithBlanks = (text) => {
-    if (!text) return "";
-    const parts = text.split(/(\{\{[^}]+\}\})/g);
-    return parts.map((part, i) => {
-      const match = part.match(/\{\{([^}]+)\}\}/);
-      if (match) {
-        const key = match[1];
-        return (
-          <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline' : 'border-b border-gray-400 px-10'}>
-            {mode === 'teacher' ? (worksheetData.answers[key] || '') : ''}
-          </span>
-        );
-      }
-      return <span key={i}>{part}</span>;
-    });
-  };
-
-  // ブロック要素のレンダリング
-  const renderBlock = (block, index) => {
-    switch (block.type) {
-      case 'text':
-        return (
-          <p key={index} className={`text-sm mb-4 ${block.bold ? 'font-bold text-gray-600' : 'text-base leading-relaxed'}`}>
-            {renderTextWithBlanks(block.content)}
-          </p>
-        );
-      case 'bullets':
-        return (
-          <div key={index} className="grid grid-cols-1 gap-3 text-lg mb-4">
-            {block.items.map((item, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="font-bold">・</span>
-                <span>{renderTextWithBlanks(item)}</span>
-              </div>
-            ))}
-          </div>
-        );
-      case 'fill_in_box':
-        return (
-          <div key={index} className="mt-6 mb-4">
-            <label className="block text-sm font-bold mb-2 italic">{block.label}</label>
-            <div className="border-4 border-double border-gray-400 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] relative bg-slate-50">
-              （　<span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? worksheetData.answers[block.answerKey] : '　　　　　'}</span>　）
-            </div>
-          </div>
-        );
-      case 'keywords':
-        return (
-          <div key={index} className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center gap-4 mb-4">
-            <span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">キーワード</span>
-            <div className="flex flex-wrap gap-4 text-sm font-bold text-slate-700">
-              {block.words.map((w, i) => <span key={i}>{w}</span>)}
-            </div>
-          </div>
-        );
-      case 'quote':
-        return (
-          <div key={index} className="bg-blue-50 p-4 rounded-xl border-l-8 border-blue-400 text-sm italic leading-loose shadow-sm mb-4">
-            {block.content}
-          </div>
-        );
-      case 'write_box':
-        return (
-          <div key={index} className="space-y-2 mt-4 mb-4">
-            {block.label && <p className="font-bold text-base">{block.label}</p>}
-            <div className="write-box p-4 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 100}px` }}>
-              {mode === 'teacher' && <span className="text-red-600">{worksheetData.answers[block.boxId]}</span>}
-              <div className="absolute bottom-2 right-2 no-print flex gap-1 font-sans opacity-40 hover:opacity-100 transition-opacity z-10 bg-white/80 p-1 rounded">
-                <button onClick={() => updateBoxHeight(block.boxId, -30)} className="bg-slate-200 hover:bg-slate-300 text-slate-700 rounded p-1 shadow-sm"><Minus size={16} /></button>
-                <button onClick={() => updateBoxHeight(block.boxId, 30)} className="bg-slate-200 hover:bg-slate-300 text-slate-700 rounded p-1 shadow-sm"><Plus size={16} /></button>
-              </div>
-            </div>
-          </div>
-        );
-      case 'self_eval':
-        return (
-          <div key={index} className="flex justify-between items-end mt-4 mb-2">
-            <div className="text-xs text-slate-400 font-bold flex gap-4">
-              <span>自己評価： Ａ ・ Ｂ ・ Ｃ</span>
-            </div>
-            <div className="border-2 border-slate-300 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-white rounded-lg">
-              <span className="font-bold text-slate-400">確認印</span>
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getPages = () => {
-    const pages = [];
-    let currentPage = [];
-    worksheetData.sections.forEach((section) => {
-      currentPage.push(section);
-      if (pageBreaks.includes(section.id)) {
-        pages.push(currentPage);
-        currentPage = [];
-      }
-    });
-    if (currentPage.length > 0) pages.push(currentPage);
-    return pages;
-  };
-
-  const togglePageBreak = (id) => {
-    setPageBreaks(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const pageElements = document.querySelectorAll('.worksheet-page');
-      const newOverflows = {};
-      pageElements.forEach((el, idx) => {
-        const content = el.querySelector('.page-content');
-        if (content && content.scrollHeight > el.clientHeight - 20) {
-          newOverflows[idx] = true;
-        }
-      });
-      setOverflows(newOverflows);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [pageBreaks, paperSize, mode, boxHeights, worksheetData]);
-
-  const pages = getPages();
-
-  return (
-    <div className="min-h-screen bg-slate-100 p-4 sm:p-8 font-sans no-print-bg">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=BIZ+UDKyokasho:wght@400;700&family=Klee+One:wght@400;600&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&display=swap');
-
-        .kyokasho-font {
-          font-family: 'BIZ UDKyokasho', 'BIZ UD教科書体', "UD Digital Kyokasho NP-R", "Meiryo", sans-serif !important;
-        }
-
-        .write-box {
-          border: 2px solid #cbd5e1;
-          border-radius: 16px;
-          width: 100%;
-          background-color: #ffffff;
-          position: relative;
-          transition: height 0.2s ease-in-out;
-          ${showGuide ? `
-            background-image: linear-gradient(to bottom, transparent 95%, #f1f5f9 95%);
-            background-size: 100% 1.4em;
-          ` : ''}
-        }
-
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教材設計エンジニア V3</title>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=BIZ+UDKyokasho:wght@400;700&family=Klee+One:wght@400;600&family=Noto+Sans+JP:wght@400;700&family=Noto+Serif+JP:wght@400;700&family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
         @media print {
-          .no-print { display: none !important; }
-          .no-print-bg { background: white !important; }
-          body { background: white; margin: 0; padding: 0; }
-          .worksheet-page {
-            box-shadow: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: 100vh !important;
-            break-after: page !important;
-          }
+            .no-print { display: none !important; }
+            .no-print-bg { background: white !important; }
+            body { background: white; margin: 0; padding: 0; }
+            .worksheet-page {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                height: 100vh !important;
+                break-after: page !important;
+            }
         }
-
         @page {
-          margin: 0;
-          size: ${paperSize === 'A4' ? 'A4' : 'B5'};
+            margin: 0;
         }
-      `}</style>
+        .write-box {
+            border: 2px solid #cbd5e1;
+            border-radius: 16px;
+            width: 100%;
+            background-color: #ffffff;
+            position: relative;
+            transition: height 0.2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen">
+    <div id="root"></div>
 
-      {/* 操作パネル */}
-      <div className="max-w-6xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-2xl shadow-xl no-print border-b-4 border-slate-300 sticky top-4 z-50 font-sans">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black text-slate-800 tracking-tight">教材設計エンジニア V3</h1>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">JSON-Driven Worksheet</span>
-          </div>
-          
-          {/* JSON入出力 */}
-          <div className="flex bg-blue-50 p-1 rounded-xl border border-blue-100">
-            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
-            <button onClick={() => fileInputRef.current.click()} className="px-4 py-2 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 transition flex items-center gap-2">
-              <Upload size={16} /> JSON読込
-            </button>
-            <div className="w-px bg-blue-200 my-1 mx-1"></div>
-            <button onClick={handleDownloadJson} className="px-4 py-2 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 transition flex items-center gap-2">
-              <Download size={16} /> JSON保存
-            </button>
-          </div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-          <div className="flex bg-slate-100 p-1 rounded-xl">
-            <button onClick={() => setMode('student')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'student' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>生徒用</button>
-            <button onClick={() => setMode('teacher')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'teacher' ? 'bg-white shadow text-red-600' : 'text-slate-500'}`}>解答付</button>
-          </div>
+        // アイコンコンポーネントのラッパー（Lucide CDN用）
+        const Icon = ({ name, size = 18, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (iconRef.current) {
+                    iconRef.current.innerHTML = lucide.createIcons({
+                        icons: { [name]: {} },
+                        attrs: { strokeWidth: 2.5, width: size, height: size }
+                    });
+                }
+            }, [name, size]);
+            return <span ref={iconRef} className={`inline-block align-text-bottom ${className}`} />;
+        };
 
-          <div className="flex gap-2">
-            <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="border rounded-lg px-2 py-2 text-sm font-bold bg-white">
-              {fontOptions.map(font => (
-                <option key={font.value} value={font.value}>{font.label}</option>
-              ))}
-            </select>
-            <select value={paperSize} onChange={(e) => setPaperSize(e.target.value)} className="border rounded-lg px-2 py-2 text-sm font-bold bg-white">
-              <option value="A4">A4</option>
-              <option value="B5">B5</option>
-            </select>
-            <button onClick={handlePrint} className="flex items-center gap-2 bg-slate-800 text-white px-5 py-2 rounded-xl font-bold shadow-lg hover:bg-slate-700 transition">
-              <Printer size={18} /> 印刷
-            </button>
-          </div>
-        </div>
-      </div>
+        const defaultData = {
+            title: "内閣のはたらき：ワークシート",
+            defaultPageBreaks: ["s2"],
+            answers: {
+                s1_1: "法律", s1_2: "国会", s1_3: "条約", s1_main: "行政",
+                s2_1: "内閣総理大臣", s2_2: "国務大臣",
+                s2_box: "（例：文部科学省）学校の教科書をつくったり、スポーツをさかんにしたりする仕事をしていると思う。",
+                s3_q1: "薬を安全に使うためのルールが守られないと、国民の健康や安全がそこなわれるおそれがあると考えたから。",
+                s3_q2: "一番は「国民の安全と健康」を守ること。また、憲法や法律に違反しないように仕事を行う必要がある。",
+                s4_summary: "内閣は、国会が決めた法律や予算をもとに、私たちの生活を支える「行政」という仕事をしていることがわかった。"
+            },
+            sections: [
+                {
+                    id: "s1", title: "1. 内閣の主な仕事", criteria: "【知技】内閣の役割を理解している。",
+                    blocks: [
+                        { type: "text", content: "教科書26ページを読んで、内閣がどのような仕事をしているかまとめましょう。", bold: true },
+                        { type: "bullets", items: ["国会で決められた（{{s1_1}}）や予算をもとに、実際の仕事を行う。", "予算案や法律案をつくって、（{{s1_2}}）に提出する。", "外国と（{{s1_3}}）を結ぶ。"]},
+                        { type: "fill_in_box", label: "【考えよう】内閣がこれらの仕事を行うことを何といいますか？", answerKey: "s1_main" }
+                    ]
+                },
+                {
+                    id: "s2", title: "2. 内閣の組織とメンバー", criteria: "【知技】内閣の仕組みを理解している。",
+                    blocks: [
+                        { type: "text", content: "内閣は、リーダーである（{{s2_1}}）と、各府・省の責任者である（{{s2_2}}）で構成されています。" },
+                        { type: "keywords", words: ["国務大臣", "内閣総理大臣", "閣議"] },
+                        { type: "write_box", label: "図を見て、気になる「省」を一つ選び、どんな仕事に関係しているか想像して書きましょう。", boxId: "s2_box", defaultHeight: 120 }
+                    ]
+                },
+                {
+                    id: "s3", title: "3. 私たちの暮らしと「行政」", criteria: "【思判表】行政の働きと国民生活の関係を表現している。",
+                    blocks: [
+                        { type: "text", content: "教科書27ページの「厚生労働省」の事例から考えましょう。", bold: true },
+                        { type: "quote", content: "「厚生労働省は、インターネットでの薬の販売を制限する命令を出しました。しかし裁判所は、その命令を無効とする判決を下しました。」" },
+                        { type: "write_box", label: "なぜ厚生労働省は、薬の販売を制限しようとしたのでしょうか？", boxId: "s3_q1", defaultHeight: 150 },
+                        { type: "write_box", label: "このように内閣が仕事をする上で、一番大切にすべきことは何だと思いますか？", boxId: "s3_q2", defaultHeight: 180 }
+                    ]
+                },
+                {
+                    id: "s4", title: "4. 本時のまとめ・振り返り", criteria: "学習のねらいの達成状況",
+                    blocks: [
+                        { type: "write_box", label: "内閣のはたらきについて、わかったことや考えたことを自由に書きましょう。", boxId: "s4_summary", defaultHeight: 250 },
+                        { type: "self_eval" }
+                    ]
+                }
+            ]
+        };
 
-      {/* ワークシート本体 */}
-      <div className="flex flex-col items-center gap-8 pb-20">
-        {pages.map((pageSections, pageIdx) => (
-          <div 
-            key={pageIdx}
-            className={`bg-white shadow-2xl relative worksheet-page transition-all duration-300
-              ${paperSize === 'A4' ? 'w-[210mm] h-[297mm]' : 'w-[182mm] h-[257mm]'}
-              ${overflows[pageIdx] ? 'ring-4 ring-red-400' : ''}
-              print:shadow-none print:m-0 print:break-after-page
-            `}
-            style={{ fontFamily: fontOptions.find(f => f.value === selectedFont).family }}
-          >
-            <div className="absolute -left-16 top-0 no-print flex flex-col items-center gap-1 font-sans">
-              <span className="bg-slate-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg">{pageIdx + 1}</span>
-              <span className="text-[10px] font-bold text-slate-400">PAGE</span>
-            </div>
+        const App = () => {
+            const [worksheetData, setWorksheetData] = useState(defaultData);
+            const [paperSize, setPaperSize] = useState('B5');
+            const [showGuide, setShowGuide] = useState(true);
+            const [mode, setMode] = useState('student');
+            const [pageBreaks, setPageBreaks] = useState(defaultData.defaultPageBreaks || []);
+            const [overflows, setOverflows] = useState({});
+            const [selectedFont, setSelectedFont] = useState('kyokasho');
+            const [boxHeights, setBoxHeights] = useState({});
+            const fileInputRef = useRef(null);
 
-            {mode === 'teacher' && (
-              <div className="absolute top-6 right-8 border-2 border-red-600 text-red-600 px-6 py-1 rounded-full font-black text-2xl rotate-[-5deg] z-50 opacity-30 select-none">
-                解答例
-              </div>
-            )}
+            const fontOptions = [
+                { value: 'kyokasho', label: '教科書体', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
+                { value: 'klee', label: 'Klee One (手書き風)', family: "'Klee One', 'BIZ UDKyokasho', 'Meiryo', sans-serif" },
+                { value: 'gothic', label: 'ゴシック体', family: "'Noto Sans JP', 'Meiryo', sans-serif" },
+                { value: 'mincho', label: '明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" },
+                { value: 'maru', label: '丸ゴシック', family: "'M PLUS Rounded 1c', 'Meiryo', sans-serif" }
+            ];
 
-            <div className="p-12 page-content">
-              {/* タイトル表示（1ページ目のみ） */}
-              {pageIdx === 0 && (
-                <h2 className="text-2xl font-black mb-6 text-center border-b-2 border-black pb-2">
-                  {worksheetData.title}
-                </h2>
-              )}
+            useEffect(() => {
+                const newHeights = {};
+                worksheetData.sections.forEach(section => {
+                    section.blocks.forEach(block => {
+                        if (block.type === 'write_box') newHeights[block.boxId] = block.defaultHeight || 100;
+                    });
+                });
+                setBoxHeights(newHeights);
+                setPageBreaks(worksheetData.defaultPageBreaks || []);
+            }, [worksheetData]);
 
-              {pageSections.map((section, sIdx) => (
-                <div key={section.id} className="relative group/section mb-10">
-                  <div className="flex items-center justify-between mb-4 border-b-2 border-slate-100 pb-2">
-                    <h3 className="text-xl font-black flex items-center gap-3">
-                      <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-xl text-base font-sans">{worksheetData.sections.findIndex(s => s.id === section.id) + 1}</span>
-                      {section.title}
-                    </h3>
-                  </div>
-                  
-                  <div className={`p-2 rounded-xl ${mode === 'teacher' ? 'bg-red-50/20' : ''}`}>
-                    {section.blocks.map((block, bIdx) => renderBlock(block, bIdx))}
-                  </div>
+            const updateBoxHeight = (boxId, delta) => {
+                setBoxHeights(prev => ({ ...prev, [boxId]: Math.max(60, (prev[boxId] || 100) + delta) }));
+            };
 
-                  {/* 改ページボタン */}
-                  {worksheetData.sections.findIndex(s => s.id === section.id) < worksheetData.sections.length - 1 && (
-                    <button 
-                      onClick={() => togglePageBreak(section.id)}
-                      className={`absolute -bottom-8 left-1/2 -translate-x-1/2 no-print px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-2 transition-all z-30 shadow-md font-sans
-                        ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}
-                      `}
-                    >
-                      <Scissors size={14} />
-                      {pageBreaks.includes(section.id) ? '改ページを解除' : 'ここで2枚目へ'}
-                    </button>
-                  )}
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.sections && data.answers) setWorksheetData(data);
+                    } catch (err) { alert("JSON読み込み失敗"); }
+                };
+                reader.readAsText(file);
+            };
+
+            const handleDownloadJson = () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ ...worksheetData, defaultPageBreaks: pageBreaks }, null, 2));
+                const a = document.createElement('a');
+                a.href = dataStr; a.download = "worksheet.json"; a.click();
+            };
+
+            const renderTextWithBlanks = (text) => {
+                if (!text) return "";
+                const parts = text.split(/(\{\{[^}]+\}\})/g);
+                return parts.map((part, i) => {
+                    const match = part.match(/\{\{([^}]+)\}\}/);
+                    if (match) {
+                        const key = match[1];
+                        return <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline' : 'border-b border-gray-400 px-10'}>{mode === 'teacher' ? (worksheetData.answers[key] || '') : ''}</span>;
+                    }
+                    return <span key={i}>{part}</span>;
+                });
+            };
+
+            const renderBlock = (block, index) => {
+                switch (block.type) {
+                    case 'text': return <p key={index} className={`text-sm mb-4 ${block.bold ? 'font-bold text-gray-600' : 'text-base leading-relaxed'}`}>{renderTextWithBlanks(block.content)}</p>;
+                    case 'bullets': return <div key={index} className="grid grid-cols-1 gap-3 text-lg mb-4">{block.items.map((item, i) => <div key={i} className="flex items-center gap-2"><span className="font-bold">・</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
+                    case 'fill_in_box': return <div key={index} className="mt-6 mb-4"><label className="block text-sm font-bold mb-2 italic">{block.label}</label><div className="border-4 border-double border-gray-400 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] relative bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? worksheetData.answers[block.answerKey] : '　　　　　'}</span> ）</div></div>;
+                    case 'keywords': return <div key={index} className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">キーワード</span>{block.words.map((w, i) => <span key={i} className="text-sm font-bold text-slate-700">{w}</span>)}</div>;
+                    case 'quote': return <div key={index} className="bg-blue-50 p-4 rounded-xl border-l-8 border-blue-400 text-sm italic leading-loose shadow-sm mb-4">{block.content}</div>;
+                    case 'write_box': return <div key={index} className="space-y-2 mt-4 mb-4"><p className="font-bold text-base">{block.label}</p><div className="write-box p-4 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 100}px`, backgroundImage: showGuide ? 'linear-gradient(to bottom, transparent 95%, #f1f5f9 95%)' : 'none', backgroundSize: '100% 1.4em' }}>{mode === 'teacher' && <span className="text-red-600">{worksheetData.answers[block.boxId]}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-1 opacity-40 hover:opacity-100 transition-opacity z-10 bg-white/80 p-1 rounded font-sans"><button onClick={() => updateBoxHeight(block.boxId, -30)} className="bg-slate-200 rounded p-1"><Icon name="minus" size={14}/></button><button onClick={() => updateBoxHeight(block.boxId, 30)} className="bg-slate-200 rounded p-1"><Icon name="plus" size={14}/></button></div></div></div>;
+                    case 'self_eval': return <div key={index} className="flex justify-between items-end mt-4 mb-2 font-sans"><div className="text-xs text-slate-400 font-bold flex gap-4"><span>自己評価： Ａ ・ Ｂ ・ Ｃ</span></div><div className="border-2 border-slate-300 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-white rounded-lg"><span className="font-bold text-slate-400">確認印</span></div></div>;
+                    default: return null;
+                }
+            };
+
+            const getPages = () => {
+                const pages = []; let currentPage = [];
+                worksheetData.sections.forEach((section) => {
+                    currentPage.push(section);
+                    if (pageBreaks.includes(section.id)) { pages.push(currentPage); currentPage = []; }
+                });
+                if (currentPage.length > 0) pages.push(currentPage); return pages;
+            };
+
+            const togglePageBreak = (id) => setPageBreaks(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    const pageElements = document.querySelectorAll('.worksheet-page');
+                    const newOverflows = {};
+                    pageElements.forEach((el, idx) => {
+                        const content = el.querySelector('.page-content');
+                        if (content && content.scrollHeight > el.clientHeight - 20) newOverflows[idx] = true;
+                    });
+                    setOverflows(newOverflows);
+                }, 500);
+                return () => clearTimeout(timer);
+            }, [pageBreaks, paperSize, mode, boxHeights, worksheetData]);
+
+            return (
+                <div className="p-4 sm:p-8 no-print-bg">
+                    {/* 操作パネル */}
+                    <div className="max-w-6xl mx-auto mb-8 bg-white p-5 rounded-2xl shadow-xl no-print border-b-4 border-slate-300 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex flex-col">
+                            <h1 className="text-xl font-black text-slate-800 tracking-tight">教材設計エンジニア V3</h1>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">GitHub Pages Deployable</span>
+                        </div>
+                        <div className="flex bg-blue-50 p-1 rounded-xl border border-blue-100">
+                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
+                            <button onClick={() => fileInputRef.current.click()} className="px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 flex items-center gap-2"><Icon name="upload" size={14}/>読込</button>
+                            <button onClick={handleDownloadJson} className="px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 flex items-center gap-2"><Icon name="download" size={14}/>保存</button>
+                        </div>
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            <button onClick={() => setMode('student')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'student' ? 'bg-white shadow text-blue-600' : 'text-slate-50'}`}>生徒</button>
+                            <button onClick={() => setMode('teacher')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'teacher' ? 'bg-white shadow text-red-600' : 'text-slate-50'}`}>解答</button>
+                        </div>
+                        <div className="flex gap-2">
+                            <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white">
+                                {fontOptions.map(font => <option key={font.value} value={font.value}>{font.label}</option>)}
+                            </select>
+                            <select value={paperSize} onChange={(e) => setPaperSize(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white">
+                                <option value="A4">A4</option><option value="B5">B5</option>
+                            </select>
+                            <button onClick={() => window.print()} className="bg-slate-800 text-white px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2"><Icon name="printer" size={14}/>印刷</button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-8 pb-20">
+                        {getPages().map((pageSections, pageIdx) => (
+                            <div 
+                                key={pageIdx}
+                                className={`bg-white shadow-2xl relative worksheet-page transition-all duration-300
+                                  ${paperSize === 'A4' ? 'w-[210mm] h-[297mm]' : 'w-[182mm] h-[257mm]'}
+                                  ${overflows[pageIdx] ? 'ring-4 ring-red-400' : ''}
+                                  print:shadow-none print:m-0 print:break-after-page
+                                `}
+                                style={{ fontFamily: fontOptions.find(f => f.value === selectedFont).family }}
+                            >
+                                <div className="absolute -left-16 top-0 no-print flex flex-col items-center gap-1 font-sans">
+                                    <span className="bg-slate-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg">{pageIdx + 1}</span>
+                                    <span className="text-[10px] font-bold text-slate-400">PAGE</span>
+                                </div>
+                                {mode === 'teacher' && <div className="absolute top-6 right-8 border-2 border-red-600 text-red-600 px-6 py-1 rounded-full font-black text-2xl rotate-[-5deg] z-50 opacity-30 select-none">解答例</div>}
+                                <div className="p-12 page-content h-full">
+                                    {pageIdx === 0 && <h2 className="text-2xl font-black mb-6 text-center border-b-2 border-black pb-2">{worksheetData.title}</h2>}
+                                    {pageSections.map((section) => (
+                                        <div key={section.id} className="relative group/section mb-10">
+                                            <div className="flex items-center justify-between mb-4 border-b-2 border-slate-100 pb-2">
+                                                <h3 className="text-xl font-black flex items-center gap-3">
+                                                    <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-xl text-base font-sans">{worksheetData.sections.findIndex(s => s.id === section.id) + 1}</span>
+                                                    {section.title}
+                                                </h3>
+                                            </div>
+                                            <div className={`p-2 rounded-xl ${mode === 'teacher' ? 'bg-red-50/20' : ''}`}>
+                                                {section.blocks.map((block, bIdx) => renderBlock(block, bIdx))}
+                                            </div>
+                                            {worksheetData.sections.findIndex(s => s.id === section.id) < worksheetData.sections.length - 1 && (
+                                                <button onClick={() => togglePageBreak(section.id)} className={`absolute -bottom-8 left-1/2 -translate-x-1/2 no-print px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-2 transition-all z-30 shadow-md font-sans ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                                                    <Icon name="scissors" size={14}/>{pageBreaks.includes(section.id) ? '解除' : '次頁へ'}
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                {overflows[pageIdx] && <div className="absolute bottom-6 right-6 no-print flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg font-bold animate-pulse shadow-lg font-sans"><Icon name="alert-triangle" size={18}/>入りきっていません</div>}
+                            </div>
+                        ))}
+                    </div>
                 </div>
-              ))}
-            </div>
+            );
+        };
 
-            {overflows[pageIdx] && (
-              <div className="absolute bottom-6 right-6 no-print flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg font-bold animate-pulse shadow-lg font-sans">
-                <AlertTriangle size={18} />
-                入りきっていません（枠を狭めるか改ページしてください）
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
