@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V3</title>
+    <title>教材設計エンジニア V4 - Editor</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -29,9 +29,7 @@
                 break-after: page !important;
             }
         }
-        @page {
-            margin: 0;
-        }
+        @page { margin: 0; }
         .write-box {
             border: 2px solid #cbd5e1;
             border-radius: 16px;
@@ -39,6 +37,12 @@
             background-color: #ffffff;
             position: relative;
             transition: height 0.2s ease-in-out;
+        }
+        .edit-border {
+            border: 2px dashed #93c5fd;
+            border-radius: 8px;
+            padding: 8px;
+            background-color: #eff6ff;
         }
     </style>
 </head>
@@ -48,87 +52,62 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // アイコンコンポーネントのラッパー（Lucide CDN用）
+        // アイコンコンポーネント（undefinedが表示されないように描画ロジックを修正）
         const Icon = ({ name, size = 18, className = "" }) => {
             const iconRef = useRef(null);
             useEffect(() => {
-                if (iconRef.current) {
-                    iconRef.current.innerHTML = lucide.createIcons({
-                        icons: { [name]: {} },
-                        attrs: { strokeWidth: 2.5, width: size, height: size }
+                if (iconRef.current && window.lucide) {
+                    // 中身を専用タグに置き換えてから、Lucideライブラリにアイコンを描画させる
+                    iconRef.current.innerHTML = `<i data-lucide="${name}"></i>`;
+                    window.lucide.createIcons({
+                        root: iconRef.current,
+                        attrs: {
+                            'stroke-width': 2.5,
+                            width: size,
+                            height: size
+                        }
                     });
                 }
             }, [name, size]);
-            return <span ref={iconRef} className={`inline-block align-text-bottom ${className}`} />;
+            return <span ref={iconRef} className={`inline-flex items-center justify-center align-middle ${className}`}></span>;
         };
 
-        // ユーザー提供のプランに基づいたデフォルトデータ
         const defaultData = {
-            title: "社会科：国の政治「内閣のはたらきと仕組み」",
+            title: "社会科：国の政治「国会のはたらきと仕組み」",
             defaultPageBreaks: ["s2"],
             answers: {
-                s2_1: "内閣総理大臣",
-                s2_2: "国務大臣",
-                s2_3: "府・省・庁",
-                s3_1: "実際の仕事を行う",
-                s3_2: "国会に提出する",
-                s3_3: "条約を結んだり",
-                box_intro: "（例）円卓を囲んで、みんなで対等に話し合っているように見える。内閣総理大臣が中心に座っている。",
-                box_ministry: "【厚生労働省】を選びました。私たちの健康や安全を守るために、薬のチェックや病気の予防などの仕事をしてくれています。もしこの仕事がなかったら、病気が広がったり、安全でない薬が売られたりして困ると思います。",
-                box_summary: "内閣は、国会で決まった法律や予算をもとに、私たちの暮らしを支える「行政」という仕事を行っている。それぞれの省庁が専門の役割を持っていて、国民が安心・安全に暮らせるように工夫していることがわかった。"
+                s1_1: "最高機関", s1_2: "立法機関", s2_1: "衆議院", s2_2: "参議院", s2_3: "二院制",
+                box_diet_role: "（例）法律を作ることは、国民のルールを決めることなので、国民の代表が集まる国会が一番大切な役割を持っていると思う。",
+                box_life_law: "【道路交通法】を選びました。この法律があるおかげで、車や歩行者が安全に道をとおることができます。",
+                box_summary: "国会は、国民の代表が集まって法律や予算を決める「国の最高機関」であることを学んだ。"
             },
             sections: [
                 {
-                    id: "s1",
-                    title: "1. 閣議（かくぎ）の様子を見てみよう",
-                    criteria: "事象への興味・関心",
+                    id: "s1", title: "1. 国会の役割を調べよう", criteria: "【知技】国会の地位と役割を理解している。",
                     blocks: [
-                        { type: "text", content: "教科書26ページの「公開された閣議の様子」の写真を見て、気づいたことを書きましょう。", bold: true },
-                        { type: "bullets", items: ["誰が中心になって話し合っていますか？", "どのような雰囲気で政治の進め方を話し合っているように見えますか？"]},
-                        { type: "write_box", boxId: "box_intro", defaultHeight: 120 }
+                        { type: "text", content: "憲法では、国会は「国の権力の（{{s1_1}}）」であり、国のみが法律を作ることができる「唯一の（{{s1_2}}）」であると定められています。", bold: false },
+                        { type: "write_box", label: "なぜ国会は「国の最高機関」と呼ばれているのでしょうか？理由を考えて書きましょう。", boxId: "box_diet_role", defaultHeight: 120 }
                     ]
                 },
                 {
-                    id: "s2",
-                    title: "2. 内閣のメンバーと組織図を完成させよう",
-                    criteria: "【知技】内閣の組織の仕組みを理解している。",
+                    id: "s2", title: "2. 二つの議院の仕組み", criteria: "【知技】衆議院と参議院の仕組みを理解している。",
                     blocks: [
-                        { type: "text", content: "教科書の図を参考に、空欄を埋めて組織の仕組みを整理しましょう。", bold: true },
-                        { type: "text", content: "・内閣の最高責任者：（{{s2_1}}）" },
-                        { type: "text", content: "・各省のリーダー：（{{s2_2}}）" },
-                        { type: "text", content: "・仕組み：内閣の下には、仕事を分担して進めるために「さまざまな（{{s2_3}}）」が置かれている。" },
-                        { type: "keywords", words: ["国務大臣", "内閣総理大臣", "各府省庁"] }
+                        { type: "text", content: "日本の国会は（{{s2_1}}）と（{{s2_2}}）の二つの議院から成り立っています。この仕組みを（{{s2_3}}）といいます。", bold: true },
+                        { type: "keywords", words: ["国民の代表", "選挙", "話し合い", "慎重な審議"] },
+                        { type: "bullets", items: ["衆議院：定数465名、任期4年（解散あり）", "参議院：定数248名、任期6年（解散なし）"] }
                     ]
                 },
                 {
-                    id: "s3",
-                    title: "3. 内閣の主な仕事（行政）を整理しよう",
-                    criteria: "【知技】内閣の役割（行政）を理解している。",
+                    id: "s3", title: "3. 法律と私たちの暮らし", criteria: "【思判表】法律が国民生活に果たす役割を考えている。",
                     blocks: [
-                        { type: "text", content: "内閣が行う「行政」には、どのような仕事がありますか？3つ書き出しましょう。", bold: true },
-                        { type: "bullets", items: [
-                            "国会で決められた法律や予算をもとに、（{{s3_1}}）。",
-                            "予算案や法律案をつくって、（{{s3_2}}）。",
-                            "外国と（{{s3_3}}）、天皇の国事行為に助言と承認を与えたりする。"
-                        ]}
+                        { type: "quote", content: "国会では、毎年150本程度の新しい法律案が話し合われています。法律は、国民の権利を守り、社会の秩序を維持するために作られます。" },
+                        { type: "write_box", label: "身近な法律（交通ルール、お店のルールなど）を一つ選び、その法律が私たちの暮らしをどう守っているか書きましょう。", boxId: "box_life_law", defaultHeight: 180 }
                     ]
                 },
                 {
-                    id: "s4",
-                    title: "4. 府・省・庁のはたらきと私たちの暮らし",
-                    criteria: "【思判表】行政が国民生活に果たす役割を考えている。",
+                    id: "s4", title: "4. まとめと振り返り", criteria: "本時の学習のまとめ",
                     blocks: [
-                        { type: "text", content: "教科書27ページを参考に、1つの省を選んで、どんな仕事が私たちの暮らしを支えているか調べましょう。", bold: true },
-                        { type: "quote", content: "例：【厚生労働省】病気の予防、食品の安全確認、高齢者や障害のある人への支援など。" },
-                        { type: "write_box", label: "「もしこの仕事がなかったら、私たちの暮らしはどうなるだろう？」", boxId: "box_ministry", defaultHeight: 180 }
-                    ]
-                },
-                {
-                    id: "s5",
-                    title: "5. 本時のまとめと振り返り",
-                    criteria: "学習のまとめ・自己評価",
-                    blocks: [
-                        { type: "write_box", label: "「内閣は、国会で決まったことをもとに…」という書き出しでまとめましょう。", boxId: "box_summary", defaultHeight: 220 },
+                        { type: "write_box", label: "国会のはたらきについて、重要だと思ったことを中心にまとめましょう。", boxId: "box_summary", defaultHeight: 220 },
                         { type: "self_eval" }
                     ]
                 }
@@ -137,36 +116,110 @@
 
         const App = () => {
             const [worksheetData, setWorksheetData] = useState(defaultData);
+            
+            // 履歴管理用のStateを追加（Undo/Redo機能）
+            const [history, setHistory] = useState([JSON.parse(JSON.stringify(defaultData))]);
+            const [historyIndex, setHistoryIndex] = useState(0);
+
             const [paperSize, setPaperSize] = useState('B5');
-            const [showGuide, setShowGuide] = useState(true);
-            const [mode, setMode] = useState('student');
+            const [mode, setMode] = useState('student'); // 'student', 'teacher', 'edit'
             const [pageBreaks, setPageBreaks] = useState(defaultData.defaultPageBreaks || []);
-            const [overflows, setOverflows] = useState({});
-            const [selectedFont, setSelectedFont] = useState('kyokasho');
             const [boxHeights, setBoxHeights] = useState({});
+            const [selectedFont, setSelectedFont] = useState('kyokasho');
             const fileInputRef = useRef(null);
 
             const fontOptions = [
                 { value: 'kyokasho', label: '教科書体', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
                 { value: 'klee', label: 'Klee One (手書き風)', family: "'Klee One', 'BIZ UDKyokasho', 'Meiryo', sans-serif" },
                 { value: 'gothic', label: 'ゴシック体', family: "'Noto Sans JP', 'Meiryo', sans-serif" },
-                { value: 'mincho', label: '明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" },
-                { value: 'maru', label: '丸ゴシック', family: "'M PLUS Rounded 1c', 'Meiryo', sans-serif" }
+                { value: 'mincho', label: '明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" }
             ];
 
             useEffect(() => {
                 const newHeights = {};
                 worksheetData.sections.forEach(section => {
                     section.blocks.forEach(block => {
-                        if (block.type === 'write_box') newHeights[block.boxId] = block.defaultHeight || 100;
+                        if (block.type === 'write_box') newHeights[block.boxId] = block.defaultHeight || 120;
                     });
                 });
                 setBoxHeights(newHeights);
                 setPageBreaks(worksheetData.defaultPageBreaks || []);
             }, [worksheetData]);
 
-            const updateBoxHeight = (boxId, delta) => {
-                setBoxHeights(prev => ({ ...prev, [boxId]: Math.max(60, (prev[boxId] || 100) + delta) }));
+            // データ更新ユーティリティ（履歴に保存するように改修）
+            const updateData = (updater) => {
+                const next = JSON.parse(JSON.stringify(worksheetData)); // Deep copy
+                updater(next);
+                setWorksheetData(next);
+                
+                // 履歴の更新（最大50件まで保持）
+                const newHistory = history.slice(0, historyIndex + 1);
+                newHistory.push(JSON.parse(JSON.stringify(next)));
+                if (newHistory.length > 50) {
+                    newHistory.shift();
+                }
+                setHistory(newHistory);
+                setHistoryIndex(newHistory.length - 1);
+            };
+
+            const handleUndo = () => {
+                if (historyIndex > 0) {
+                    const newIndex = historyIndex - 1;
+                    setHistoryIndex(newIndex);
+                    setWorksheetData(history[newIndex]);
+                }
+            };
+
+            const handleRedo = () => {
+                if (historyIndex < history.length - 1) {
+                    const newIndex = historyIndex + 1;
+                    setHistoryIndex(newIndex);
+                    setWorksheetData(history[newIndex]);
+                }
+            };
+
+            const updateAnswer = (key, val) => updateData(d => { d.answers[key] = val; });
+            
+            // ブロック操作
+            const addBlock = (sIdx, type) => {
+                updateData(d => {
+                    const newId = `key_${Date.now()}`;
+                    let newBlock = { type };
+                    if (type === 'text') newBlock = { type, content: "新しいテキスト", bold: false };
+                    if (type === 'bullets') newBlock = { type, items: ["項目1", "項目2"] };
+                    if (type === 'fill_in_box') newBlock = { type, label: "問い", answerKey: newId };
+                    if (type === 'keywords') newBlock = { type, words: ["キーワード"] };
+                    if (type === 'quote') newBlock = { type, content: "引用文" };
+                    if (type === 'write_box') newBlock = { type, label: "問い", boxId: newId, defaultHeight: 120 };
+                    d.sections[sIdx].blocks.push(newBlock);
+                    if (type === 'fill_in_box' || type === 'write_box') d.answers[newId] = "解答例";
+                });
+            };
+            const removeBlock = (sIdx, bIdx) => updateData(d => { d.sections[sIdx].blocks.splice(bIdx, 1); });
+            const moveBlock = (sIdx, bIdx, dir) => {
+                updateData(d => {
+                    const blocks = d.sections[sIdx].blocks;
+                    if (dir === -1 && bIdx > 0) {
+                        [blocks[bIdx-1], blocks[bIdx]] = [blocks[bIdx], blocks[bIdx-1]];
+                    } else if (dir === 1 && bIdx < blocks.length - 1) {
+                        [blocks[bIdx], blocks[bIdx+1]] = [blocks[bIdx+1], blocks[bIdx]];
+                    }
+                });
+            };
+
+            // セクション操作
+            const addSection = () => updateData(d => {
+                d.sections.push({ id: `s_${Date.now()}`, title: "新しい大問", criteria: "評価規準", blocks: [] });
+            });
+            const removeSection = (sIdx) => updateData(d => { d.sections.splice(sIdx, 1); });
+            const moveSection = (sIdx, dir) => {
+                updateData(d => {
+                    if (dir === -1 && sIdx > 0) {
+                        [d.sections[sIdx-1], d.sections[sIdx]] = [d.sections[sIdx], d.sections[sIdx-1]];
+                    } else if (dir === 1 && sIdx < d.sections.length - 1) {
+                        [d.sections[sIdx], d.sections[sIdx+1]] = [d.sections[sIdx+1], d.sections[sIdx]];
+                    }
+                });
             };
 
             const handleFileUpload = (e) => {
@@ -176,16 +229,21 @@
                 reader.onload = (event) => {
                     try {
                         const data = JSON.parse(event.target.result);
-                        if (data.sections && data.answers) setWorksheetData(data);
-                    } catch (err) { alert("JSON形式がアプリの仕様と一致しません。"); }
+                        if (data.sections && data.answers) {
+                            setWorksheetData(data);
+                            setHistory([JSON.parse(JSON.stringify(data))]);
+                            setHistoryIndex(0);
+                        }
+                    } catch (err) { alert("JSON形式が不正です。"); }
                 };
                 reader.readAsText(file);
+                e.target.value = '';
             };
 
             const handleDownloadJson = () => {
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ ...worksheetData, defaultPageBreaks: pageBreaks }, null, 2));
                 const a = document.createElement('a');
-                a.href = dataStr; a.download = "worksheet.json"; a.click();
+                a.href = dataStr; a.download = "worksheet_edited.json"; a.click();
             };
 
             const renderTextWithBlanks = (text) => {
@@ -195,21 +253,72 @@
                     const match = part.match(/\{\{([^}]+)\}\}/);
                     if (match) {
                         const key = match[1];
-                        return <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline' : 'border-b border-gray-400 px-10'}>{mode === 'teacher' ? (worksheetData.answers[key] || '') : ''}</span>;
+                        return <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline' : 'border-b border-gray-400 px-10'}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[key]) || '') : ''}</span>;
                     }
                     return <span key={i}>{part}</span>;
                 });
             };
 
-            const renderBlock = (block, index) => {
+            // 【表示・編集レンダリングロジック】
+            const renderBlock = (sIdx, bIdx, block) => {
+                if (mode === 'edit') {
+                    // --- 編集モード ---
+                    return (
+                        <div key={bIdx} className="edit-border mb-3 relative font-sans group/edit">
+                            <div className="absolute top-1 right-1 flex gap-1 opacity-50 group-hover/edit:opacity-100 transition">
+                                <button onClick={() => moveBlock(sIdx, bIdx, -1)} className="p-1 bg-white border rounded hover:bg-slate-100 flex items-center justify-center w-6 h-6"><Icon name="arrow-up" size={14}/></button>
+                                <button onClick={() => moveBlock(sIdx, bIdx, 1)} className="p-1 bg-white border rounded hover:bg-slate-100 flex items-center justify-center w-6 h-6"><Icon name="arrow-down" size={14}/></button>
+                                <button onClick={() => removeBlock(sIdx, bIdx)} className="p-1 bg-red-100 text-red-600 border border-red-200 rounded hover:bg-red-200 flex items-center justify-center w-6 h-6"><Icon name="trash-2" size={14}/></button>
+                            </div>
+                            <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold uppercase mb-2 inline-block">{block.type}</span>
+                            
+                            {block.type === 'text' && (
+                                <div className="space-y-2">
+                                    <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].content = e.target.value)} className="w-full border rounded p-2 text-sm" rows="2" placeholder="テキスト。穴埋めは {{キー名}}"></textarea>
+                                    <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={!!block.bold} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].bold = e.target.checked)} /> 太字にする</label>
+                                </div>
+                            )}
+                            {block.type === 'bullets' && (
+                                <textarea value={(block.items || []).join('\n')} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].items = e.target.value.split('\n'))} className="w-full border rounded p-2 text-sm" rows="3" placeholder="改行で箇条書き項目を区切ります"></textarea>
+                            )}
+                            {block.type === 'fill_in_box' && (
+                                <div className="space-y-2">
+                                    <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].label = e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="問いのラベル" />
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="text-red-600 font-bold whitespace-nowrap">解答:</span>
+                                        <input value={(worksheetData.answers && worksheetData.answers[block.answerKey]) || ''} onChange={e => updateAnswer(block.answerKey, e.target.value)} className="flex-1 border rounded p-1" placeholder="穴埋めの答え" />
+                                    </div>
+                                </div>
+                            )}
+                            {block.type === 'keywords' && (
+                                <input value={(block.words || []).join(', ')} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].words = e.target.value.split(',').map(s=>s.trim()))} className="w-full border rounded p-2 text-sm" placeholder="カンマ(,)区切りでキーワード入力" />
+                            )}
+                            {block.type === 'quote' && (
+                                <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].content = e.target.value)} className="w-full border rounded p-2 text-sm" rows="2" placeholder="引用文"></textarea>
+                            )}
+                            {block.type === 'write_box' && (
+                                <div className="space-y-2">
+                                    <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx].blocks[bIdx].label = e.target.value)} className="w-full border rounded p-1 text-sm" placeholder="記述欄の問い" />
+                                    <div className="flex flex-col gap-1 text-sm">
+                                        <span className="text-red-600 font-bold">模範解答例:</span>
+                                        <textarea value={(worksheetData.answers && worksheetData.answers[block.boxId]) || ''} onChange={e => updateAnswer(block.boxId, e.target.value)} className="w-full border rounded p-2" rows="2" placeholder="解答例を入力"></textarea>
+                                    </div>
+                                </div>
+                            )}
+                            {block.type === 'self_eval' && <div className="text-sm text-slate-500">（自己評価・確認印エリア）※設定項目なし</div>}
+                        </div>
+                    );
+                }
+
+                // --- 通常モード（生徒・解答） ---
                 switch (block.type) {
-                    case 'text': return <p key={index} className={`mb-4 ${block.bold ? 'font-bold text-gray-700' : 'text-base leading-relaxed'}`}>{renderTextWithBlanks(block.content)}</p>;
-                    case 'bullets': return <div key={index} className="grid grid-cols-1 gap-2 mb-4">{block.items.map((item, i) => <div key={i} className="flex items-center gap-2"><span className="font-bold">・</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
-                    case 'fill_in_box': return <div key={index} className="mt-4 mb-4"><label className="block text-sm font-bold mb-2 italic">{block.label}</label><div className="border-4 border-double border-gray-400 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] relative bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? worksheetData.answers[block.answerKey] : '　　　　　'}</span> ）</div></div>;
-                    case 'keywords': return <div key={index} className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">キーワード</span>{block.words.map((w, i) => <span key={i} className="text-sm font-bold text-slate-700">{w}</span>)}</div>;
-                    case 'quote': return <div key={index} className="bg-blue-50 p-4 rounded-xl border-l-8 border-blue-400 text-sm italic leading-loose shadow-sm mb-4">{block.content}</div>;
-                    case 'write_box': return <div key={index} className="space-y-2 mt-4 mb-4"><p className="font-bold text-base">{block.label}</p><div className="write-box p-4 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 100}px`, backgroundImage: showGuide ? 'linear-gradient(to bottom, transparent 95%, #f1f5f9 95%)' : 'none', backgroundSize: '100% 1.4em' }}>{mode === 'teacher' && <span className="text-red-600">{worksheetData.answers[block.boxId]}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-1 opacity-40 hover:opacity-100 transition-opacity z-10 bg-white/80 p-1 rounded font-sans"><button onClick={() => updateBoxHeight(block.boxId, -30)} className="bg-slate-200 rounded p-1"><Icon name="minus" size={14}/></button><button onClick={() => updateBoxHeight(block.boxId, 30)} className="bg-slate-200 rounded p-1"><Icon name="plus" size={14}/></button></div></div></div>;
-                    case 'self_eval': return <div key={index} className="flex justify-between items-end mt-4 mb-2 font-sans"><div className="text-xs text-slate-400 font-bold flex gap-4"><span>自己評価： Ａ ・ Ｂ ・ Ｃ</span></div><div className="border-2 border-slate-300 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-white rounded-lg"><span className="font-bold text-slate-400">確認印</span></div></div>;
+                    case 'text': return <p key={bIdx} className={`mb-4 ${block.bold ? 'font-bold text-gray-700' : 'text-base leading-relaxed'}`}>{renderTextWithBlanks(block.content || '')}</p>;
+                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1">・</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
+                    case 'fill_in_box': return <div key={bIdx} className="mt-4 mb-4"><label className="block text-sm font-bold mb-2 italic">{block.label || ''}</label><div className="border-4 border-double border-gray-400 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[block.answerKey]) || '') : '　　　　　'}</span> ）</div></div>;
+                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-1 rounded">キーワード</span><div className="flex flex-wrap gap-3">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-700 bg-white px-2 py-0.5 rounded border shadow-sm">{w}</span>)}</div></div>;
+                    case 'quote': return <div key={bIdx} className="bg-blue-50 p-4 rounded-xl border-l-8 border-blue-400 text-sm italic leading-loose shadow-sm mb-4">{block.content || ''}</div>;
+                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-4"><p className="font-bold text-base leading-relaxed">{block.label || ''}</p><div className="write-box p-4 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 100}px`, backgroundImage: 'linear-gradient(to bottom, transparent 95%, #f1f5f9 95%)', backgroundSize: '100% 1.4em' }}>{mode === 'teacher' && <span className="text-red-600">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 p-1 rounded font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-30)}))} className="bg-slate-200 rounded p-1 hover:bg-slate-300 flex items-center justify-center w-6 h-6"><Icon name="minus" size={14}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: p[block.boxId]+30}))} className="bg-slate-200 rounded p-1 hover:bg-slate-300 flex items-center justify-center w-6 h-6"><Icon name="plus" size={14}/></button></div></div></div>;
+                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-4 mb-2 font-sans"><div className="text-xs text-slate-400 font-bold flex gap-4"><span>自己評価： Ａ ・ Ｂ ・ Ｃ</span></div><div className="border-2 border-slate-300 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-white rounded-lg"><span className="font-bold text-slate-400">確認印</span></div></div>;
                     default: return null;
                 }
             };
@@ -225,44 +334,49 @@
 
             const togglePageBreak = (id) => setPageBreaks(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    const pageElements = document.querySelectorAll('.worksheet-page');
-                    const newOverflows = {};
-                    pageElements.forEach((el, idx) => {
-                        const content = el.querySelector('.page-content');
-                        if (content && content.scrollHeight > el.clientHeight - 20) newOverflows[idx] = true;
-                    });
-                    setOverflows(newOverflows);
-                }, 500);
-                return () => clearTimeout(timer);
-            }, [pageBreaks, paperSize, mode, boxHeights, worksheetData]);
-
             return (
                 <div className="p-4 sm:p-8 no-print-bg">
                     {/* 操作パネル */}
-                    <div className="max-w-6xl mx-auto mb-8 bg-white p-5 rounded-2xl shadow-xl no-print border-b-4 border-slate-300 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-4">
+                    <div className="max-w-6xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-2xl shadow-xl no-print border-b-4 border-slate-300 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-4">
                         <div className="flex flex-col">
-                            <h1 className="text-xl font-black text-slate-800 tracking-tight">ワークシート・ビルダー</h1>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Teaching Design Engine</span>
+                            <h1 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                                <Icon name="edit" className="text-blue-600" /> 教材設計エンジニア V4
+                            </h1>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Live Editor Enabled</span>
                         </div>
-                        <div className="flex bg-blue-50 p-1 rounded-xl border border-blue-100">
-                            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
-                            <button onClick={() => fileInputRef.current.click()} className="px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 flex items-center gap-2"><Icon name="upload" size={14}/>読込</button>
-                            <button onClick={handleDownloadJson} className="px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 hover:bg-blue-100 flex items-center gap-2"><Icon name="download" size={14}/>保存</button>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="flex bg-slate-100 p-1 rounded-xl">
+                                <button onClick={() => setMode('student')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'student' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>生徒用</button>
+                                <button onClick={() => setMode('teacher')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'teacher' ? 'bg-white shadow text-red-600' : 'text-slate-500 hover:text-slate-700'}`}>解答付</button>
+                                <button onClick={() => setMode('edit')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'edit' ? 'bg-white shadow text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>編集モード</button>
+                            </div>
+                            
+                            {/* Undo / Redo ボタン */}
+                            {mode === 'edit' && (
+                                <div className="flex gap-1 bg-emerald-50 p-1 rounded-xl border border-emerald-100">
+                                    <button onClick={handleUndo} disabled={historyIndex === 0} className={`p-1.5 rounded-lg transition flex items-center justify-center w-8 h-8 ${historyIndex === 0 ? 'text-emerald-200 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-100'}`} title="元に戻す"><Icon name="undo" size={16}/></button>
+                                    <button onClick={handleRedo} disabled={historyIndex === history.length - 1} className={`p-1.5 rounded-lg transition flex items-center justify-center w-8 h-8 ${historyIndex === history.length - 1 ? 'text-emerald-200 cursor-not-allowed' : 'text-emerald-600 hover:bg-emerald-100'}`} title="やり直す"><Icon name="redo" size={16}/></button>
+                                </div>
+                            )}
+
+                            <div className="w-px h-8 bg-slate-200"></div>
+
+                            <div className="flex gap-2">
+                                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
+                                <button onClick={() => fileInputRef.current.click()} className="px-3 py-1.5 rounded-lg text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition flex items-center gap-1"><Icon name="upload" size={14}/>読込</button>
+                                <button onClick={handleDownloadJson} className="px-3 py-1.5 rounded-lg text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition flex items-center gap-1 border border-blue-200"><Icon name="download" size={14}/>保存</button>
+                            </div>
                         </div>
-                        <div className="flex bg-slate-100 p-1 rounded-xl">
-                            <button onClick={() => setMode('student')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'student' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>生徒</button>
-                            <button onClick={() => setMode('teacher')} className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${mode === 'teacher' ? 'bg-white shadow text-red-600' : 'text-slate-500'}`}>解答</button>
-                        </div>
+
                         <div className="flex gap-2">
-                            <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white">
+                            <select value={selectedFont} onChange={(e) => setSelectedFont(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white outline-none focus:border-blue-500">
                                 {fontOptions.map(font => <option key={font.value} value={font.value}>{font.label}</option>)}
                             </select>
-                            <select value={paperSize} onChange={(e) => setPaperSize(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white">
+                            <select value={paperSize} onChange={(e) => setPaperSize(e.target.value)} className="border rounded-lg px-2 py-1.5 text-sm font-bold bg-white outline-none focus:border-blue-500">
                                 <option value="A4">A4</option><option value="B5">B5</option>
                             </select>
-                            <button onClick={() => window.print()} className="bg-slate-800 text-white px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2"><Icon name="printer" size={14}/>印刷</button>
+                            <button onClick={() => { window.focus(); setTimeout(()=>window.print(), 50); }} className="bg-slate-800 text-white px-5 py-1.5 rounded-xl font-bold shadow-lg flex items-center gap-2 hover:bg-slate-700 transition active:scale-95"><Icon name="printer" size={14}/>印刷</button>
                         </div>
                     </div>
 
@@ -271,8 +385,7 @@
                             <div 
                                 key={pageIdx}
                                 className={`bg-white shadow-2xl relative worksheet-page transition-all duration-300
-                                  ${paperSize === 'A4' ? 'w-[210mm] h-[297mm]' : 'w-[182mm] h-[257mm]'}
-                                  ${overflows[pageIdx] ? 'ring-4 ring-red-400' : ''}
+                                  ${paperSize === 'A4' ? 'w-[210mm] min-h-[297mm]' : 'w-[182mm] min-h-[257mm]'}
                                   print:shadow-none print:m-0 print:break-after-page
                                 `}
                                 style={{ fontFamily: fontOptions.find(f => f.value === selectedFont).family }}
@@ -281,30 +394,94 @@
                                     <span className="bg-slate-800 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-lg">{pageIdx + 1}</span>
                                     <span className="text-[10px] font-bold text-slate-400">PAGE</span>
                                 </div>
-                                {mode === 'teacher' && <div className="absolute top-6 right-8 border-2 border-red-600 text-red-600 px-6 py-1 rounded-full font-black text-2xl rotate-[-5deg] z-50 opacity-30 select-none">解答例</div>}
+
+                                {mode === 'teacher' && <div className="absolute top-6 right-8 border-2 border-red-600 text-red-600 px-6 py-1 rounded-full font-black text-2xl rotate-[-5deg] z-50 opacity-30 select-none pointer-events-none">解答例</div>}
+                                {mode === 'edit' && <div className="absolute top-0 right-0 bg-emerald-500 text-white px-4 py-1 font-sans text-xs font-bold rounded-bl-lg shadow-sm">編集モード動作中</div>}
+
                                 <div className="p-12 page-content h-full">
-                                    {pageIdx === 0 && <h2 className="text-2xl font-black mb-6 text-center border-b-2 border-black pb-2 leading-relaxed">{worksheetData.title}</h2>}
-                                    {pageSections.map((section) => (
-                                        <div key={section.id} className="relative group/section mb-8">
-                                            <div className="flex items-center justify-between mb-3 border-b-2 border-slate-100 pb-2">
-                                                <h3 className="text-xl font-black flex items-center gap-3">
-                                                    <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-xl text-base font-sans">{worksheetData.sections.findIndex(s => s.id === section.id) + 1}</span>
-                                                    {section.title}
-                                                </h3>
-                                                <span className="text-[10px] font-bold text-slate-400 no-print italic">[{section.criteria}]</span>
-                                            </div>
-                                            <div className={`p-2 rounded-xl ${mode === 'teacher' ? 'bg-red-50/20' : ''}`}>
-                                                {section.blocks.map((block, bIdx) => renderBlock(block, bIdx))}
-                                            </div>
-                                            {worksheetData.sections.findIndex(s => s.id === section.id) < worksheetData.sections.length - 1 && (
-                                                <button onClick={() => togglePageBreak(section.id)} className={`absolute -bottom-8 left-1/2 -translate-x-1/2 no-print px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-2 transition-all z-30 shadow-md font-sans ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                                                    <Icon name="scissors" size={14}/>{pageBreaks.includes(section.id) ? '解除' : '次頁へ'}
-                                                </button>
+                                    {/* ワークシート タイトル */}
+                                    {pageIdx === 0 && (
+                                        <div className="mb-8 border-b-2 border-black pb-3">
+                                            {mode === 'edit' ? (
+                                                <input value={worksheetData.title || ''} onChange={e => updateData(d => d.title = e.target.value)} className="w-full text-2xl font-black text-center border-b-2 border-emerald-300 outline-none bg-emerald-50" placeholder="ワークシートのタイトル" />
+                                            ) : (
+                                                <h2 className="text-2xl font-black text-center leading-relaxed">{worksheetData.title || ''}</h2>
                                             )}
                                         </div>
-                                    ))}
+                                    )}
+
+                                    {/* 各セクションの描画 */}
+                                    {pageSections.map((section, sectionRelativeIndex) => {
+                                        const sIdx = worksheetData.sections.findIndex(s => s.id === section.id);
+                                        return (
+                                            <div key={section.id} className={`relative mb-8 ${mode === 'edit' ? 'border-2 border-emerald-200 rounded-xl p-4 bg-white shadow-sm' : ''}`}>
+                                                
+                                                {/* 編集モード：セクション操作バー */}
+                                                {mode === 'edit' && (
+                                                    <div className="absolute -top-3 right-4 flex gap-1 font-sans z-10">
+                                                        <button onClick={() => moveSection(sIdx, -1)} className="bg-white border border-slate-300 text-slate-600 px-2 py-0.5 rounded shadow-sm text-xs hover:bg-slate-50 flex items-center gap-1"><Icon name="arrow-up" size={12}/> 上へ</button>
+                                                        <button onClick={() => moveSection(sIdx, 1)} className="bg-white border border-slate-300 text-slate-600 px-2 py-0.5 rounded shadow-sm text-xs hover:bg-slate-50 flex items-center gap-1"><Icon name="arrow-down" size={12}/> 下へ</button>
+                                                        <button onClick={() => removeSection(sIdx)} className="bg-red-500 text-white px-2 py-0.5 rounded shadow-sm text-xs hover:bg-red-600 flex items-center gap-1"><Icon name="trash-2" size={12}/> 削除</button>
+                                                    </div>
+                                                )}
+
+                                                {/* セクション タイトル & 評価規準 */}
+                                                <div className="flex items-start justify-between mb-4 pb-2 border-b-2 border-slate-100">
+                                                    <div className="flex-1">
+                                                        {mode === 'edit' ? (
+                                                            <div className="space-y-2 w-full pr-4">
+                                                                <input value={section.title || ''} onChange={e => updateData(d => d.sections[sIdx].title = e.target.value)} className="w-full text-xl font-black border-b border-dashed border-emerald-300 bg-emerald-50 outline-none" placeholder="大問のタイトル" />
+                                                                <input value={section.criteria || ''} onChange={e => updateData(d => d.sections[sIdx].criteria = e.target.value)} className="w-full text-xs text-slate-500 font-bold border-b border-dashed border-emerald-300 bg-emerald-50 outline-none" placeholder="評価規準（例：【知技】〇〇を理解している）" />
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <h3 className="text-xl font-black flex items-center gap-3">
+                                                                    <span className="bg-slate-800 text-white w-8 h-8 flex items-center justify-center rounded-xl text-base font-sans">{sIdx + 1}</span>
+                                                                    {section.title || ''}
+                                                                </h3>
+                                                                <span className="text-[10px] font-bold text-slate-400 no-print italic block mt-1 ml-11">[{section.criteria || ''}]</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* ブロック一覧 */}
+                                                <div className={`p-2 rounded-xl ${mode === 'teacher' ? 'bg-red-50/20' : ''}`}>
+                                                    {section.blocks.map((block, bIdx) => renderBlock(sIdx, bIdx, block))}
+                                                </div>
+
+                                                {/* 編集モード：ブロック追加ボタン */}
+                                                {mode === 'edit' && (
+                                                    <div className="mt-4 p-3 bg-slate-50 border border-dashed border-slate-300 rounded-lg flex flex-wrap gap-2 items-center font-sans">
+                                                        <span className="text-xs font-bold text-slate-500 mr-2 flex items-center gap-1"><Icon name="plus" size={14}/> 要素を追加:</span>
+                                                        <button onClick={()=>addBlock(sIdx, 'text')} className="text-xs bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-100">テキスト</button>
+                                                        <button onClick={()=>addBlock(sIdx, 'bullets')} className="text-xs bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-100">箇条書き</button>
+                                                        <button onClick={()=>addBlock(sIdx, 'fill_in_box')} className="text-xs bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-100">穴埋め</button>
+                                                        <button onClick={()=>addBlock(sIdx, 'keywords')} className="text-xs bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-100">キーワード</button>
+                                                        <button onClick={()=>addBlock(sIdx, 'write_box')} className="text-xs bg-white border border-slate-300 px-2 py-1 rounded hover:bg-slate-100">記述枠</button>
+                                                    </div>
+                                                )}
+
+                                                {/* 改ページ制御（通常モード時のみ） */}
+                                                {mode !== 'edit' && sIdx < worksheetData.sections.length - 1 && (
+                                                    <button onClick={() => togglePageBreak(section.id)} className={`absolute -bottom-8 left-1/2 -translate-x-1/2 no-print px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-2 transition-all z-30 shadow-md font-sans ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                                                        <Icon name="scissors" size={14}/>{pageBreaks.includes(section.id) ? '改ページ解除' : 'ここで次頁へ'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* 編集モード：セクション追加ボタン */}
+                                    {mode === 'edit' && (
+                                        <div className="mt-8 flex justify-center font-sans">
+                                            <button onClick={addSection} className="flex items-center gap-2 bg-emerald-100 text-emerald-700 border-2 border-emerald-300 px-6 py-3 rounded-xl font-bold shadow-sm hover:bg-emerald-200 transition">
+                                                <Icon name="plus" size={18} /> 新しい大問（セクション）を追加
+                                            </button>
+                                        </div>
+                                    )}
+
                                 </div>
-                                {overflows[pageIdx] && <div className="absolute bottom-6 right-6 no-print flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg font-bold animate-pulse shadow-lg font-sans"><Icon name="alert-triangle" size={18}/>入りきっていません</div>}
                             </div>
                         ))}
                     </div>
