@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V9.1 - Educational Specs</title>
+    <title>教材設計エンジニア V9.3 - Prompt Enhancements</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -116,7 +116,7 @@
                 {
                     id: "s3", title: "3. 比較検討・練り上げ", criteria: "【思判表】他者の考えと比較し、共通点や違いを見出している。", layout: "2-col",
                     leftBlocks: [
-                        { type: "quote", content: "Ａさんの考え：\n「はしっこの三角形を切り取って、反対側にくっつけると長方形になります。」" }
+                        { type: "quote", content: "Ａさんの考え：\n「はしっ globalこの三角形を切り取って、反対側にくっつけると長方形になります。」" }
                     ],
                     rightBlocks: [
                         { type: "quote", content: "Ｂさんの考え：\n「真ん中で半分に切って、２つの形を組み合わせると長方形になります。」" }
@@ -145,10 +145,19 @@
             const [showHelp, setShowHelp] = useState(false);
             const [isPanelOpen, setIsPanelOpen] = useState(true);
             
+            // プロンプト生成関連ステート
             const [showPromptModal, setShowPromptModal] = useState(false);
             const [promptText, setPromptText] = useState("");
             const [copyMessage, setCopyMessage] = useState("");
-            const [useImageOption, setUseImageOption] = useState(false); // 追加: 画像使用オプション用ステート
+            const [useImageOption, setUseImageOption] = useState(false);
+            
+            // 追加: プロンプト用のユーザー入力ステート
+            const [promptInputs, setPromptInputs] = useState({
+                gradeSubject: "小学校5年生 算数科",
+                theme: "「面積の求め方を考えよう」",
+                aim: "平行四辺形の面積の求め方を、今まで習った形に変形して考えることができる。",
+                criteria: "【思判表】図や式を用いて論理的に思考し、表現している。"
+            });
 
             const [showImportModal, setShowImportModal] = useState(false);
             const [importText, setImportText] = useState("");
@@ -330,14 +339,18 @@
                 setBoxHeights(newHeights);
             };
 
-            // AIプロンプト生成ロジックを関数化し、画像オプションに対応
-            const generatePrompt = (useImg, data) => {
+            // AIプロンプト生成ロジック（入力フォーム対応版）
+            const generatePrompt = (useImg, data, inputs) => {
                 return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
 教育学的知見（学力の三要素、評価の三観点、個別最適な学びと協同的な学び）に基づき、児童の思考プロセスを構造化するワークシートを作成してください。
 
 【テーマ・対象】
-小学校〇年生 〇〇科
-「〇〇」
+学年・教科：${inputs.gradeSubject}
+単元名・テーマ：${inputs.theme}
+
+【学習のねらい・評価規準】
+ねらい：${inputs.aim}
+評価規準：${inputs.criteria}
 ${useImg ? '\n※添付された教科書や資料の画像がある場合は、OCRで内容（テキストや重要な発問、図解の意図など）を読み取り、学習内容に沿ってワークシートを構成してください。\n' : ''}
 【設計の要件・制約】
 1. 指定されたJSONのデータ構造（sections, answers）を厳密に維持してください。
@@ -357,9 +370,16 @@ ${JSON.stringify(data, null, 2)}`;
 
             const openPromptModal = () => {
                 setUseImageOption(false);
-                setPromptText(generatePrompt(false, worksheetData));
+                setPromptText(generatePrompt(false, worksheetData, promptInputs));
                 setShowPromptModal(true);
                 setCopyMessage("");
+            };
+
+            // 追加: フォームの入力ハンドラ
+            const handlePromptInputChange = (field, value) => {
+                const newInputs = { ...promptInputs, [field]: value };
+                setPromptInputs(newInputs);
+                setPromptText(generatePrompt(useImageOption, worksheetData, newInputs));
             };
 
             const handleCopyPrompt = () => {
@@ -678,19 +698,55 @@ ${JSON.stringify(data, null, 2)}`;
                     {showPromptModal && (
                         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
                             <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
+                                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50 shrink-0">
                                     <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
                                         <Icon name="sparkles" className="text-amber-500"/> AI生成用プロンプト出力
                                     </h2>
                                     <button onClick={() => setShowPromptModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
                                 </div>
-                                <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+                                <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-4">
                                     <p className="text-sm text-slate-600 font-bold">
-                                        以下のテキストをChatGPTやClaudeなどのAIに貼り付けることで、このアプリで読み込める形式の新しい教材データを自動生成できます。<br/>
-                                        <span className="text-amber-600">※【テーマ・対象】の部分を自由に書き換えてからコピーしてください。</span>
+                                        以下のフォームに入力すると、AIに渡すプロンプトが自動生成されます。完成したテキストをコピーしてAIに送信してください。
                                     </p>
                                     
-                                    {/* 追加: OCR連携オプション */}
+                                    {/* プロンプト入力フォーム */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-slate-50 border border-slate-200 rounded-xl">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">学年・教科</label>
+                                            <input 
+                                                value={promptInputs.gradeSubject} 
+                                                onChange={e => handlePromptInputChange('gradeSubject', e.target.value)} 
+                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" 
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">単元名・テーマ</label>
+                                            <input 
+                                                value={promptInputs.theme} 
+                                                onChange={e => handlePromptInputChange('theme', e.target.value)} 
+                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" 
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">学習のねらい</label>
+                                            <input 
+                                                value={promptInputs.aim} 
+                                                onChange={e => handlePromptInputChange('aim', e.target.value)} 
+                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none font-bold text-blue-700 bg-blue-50/30" 
+                                            />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">評価規準</label>
+                                            <input 
+                                                value={promptInputs.criteria} 
+                                                onChange={e => handlePromptInputChange('criteria', e.target.value)} 
+                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600" 
+                                                placeholder="例：【知技】〜について理解している"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* OCR連携オプション */}
                                     <div className="flex flex-col gap-2 p-4 bg-blue-50/80 rounded-xl border border-blue-100">
                                         <label className="flex items-center gap-3 cursor-pointer group w-max">
                                             <input 
@@ -698,7 +754,7 @@ ${JSON.stringify(data, null, 2)}`;
                                                 checked={useImageOption}
                                                 onChange={(e) => {
                                                     setUseImageOption(e.target.checked);
-                                                    setPromptText(generatePrompt(e.target.checked, worksheetData));
+                                                    setPromptText(generatePrompt(e.target.checked, worksheetData, promptInputs));
                                                 }}
                                                 className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                                             />
@@ -716,15 +772,16 @@ ${JSON.stringify(data, null, 2)}`;
                                     <textarea 
                                         value={promptText} 
                                         onChange={e => setPromptText(e.target.value)} 
-                                        className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-amber-200 outline-none resize-none bg-slate-50 min-h-[200px]"
+                                        className="w-full shrink-0 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-amber-200 outline-none resize-none bg-slate-50 min-h-[150px]"
                                     ></textarea>
+                                    
                                     {copyMessage && (
                                         <div className="bg-emerald-50 text-emerald-600 px-4 py-3 rounded-lg text-sm font-bold border border-emerald-200 text-center animate-pulse flex items-center justify-center gap-2">
                                             <Icon name="check-circle" size={18}/> {copyMessage}
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
                                     <button onClick={() => setShowPromptModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">閉じる</button>
                                     <button onClick={handleCopyPrompt} className="bg-amber-500 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-amber-600 transition-colors shadow-lg active:scale-95 flex items-center gap-2">
                                         <Icon name="copy" size={18}/> プロンプトをコピー
@@ -747,7 +804,7 @@ ${JSON.stringify(data, null, 2)}`;
                             </button>
 
                             <div className="flex flex-col">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9.1</h1>
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9.3</h1>
                                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">Educational Format Spec</span>
                             </div>
                             
