@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V9 - Panel Toggle Support</title>
+    <title>教材設計エンジニア V9.1 - Educational Specs</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -35,7 +35,7 @@
         @page { margin: 0; }
         .write-box {
             border: 2px solid #cbd5e1;
-            border-radius: 16px;
+            border-radius: 12px;
             width: 100%;
             background-color: #ffffff;
             position: relative;
@@ -48,6 +48,13 @@
         }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* 発達段階に応じたマス目・罫線（UD配慮の淡いグレー） */
+        .bg-lines { background-image: linear-gradient(to bottom, transparent 95%, #e2e8f0 95%); background-size: 100% 1.8em; }
+        .bg-grid-large { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 20mm 20mm; }
+        .bg-grid-medium { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 15mm 15mm; }
+        .bg-grid-small { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 10mm 10mm; }
+        .bg-blank { background-image: none; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
@@ -71,54 +78,54 @@
         };
 
         const blockInfo = {
+            aim_box: { label: 'めあて・課題', icon: 'target' },
             text: { label: 'テキスト・本文', icon: 'type' },
             bullets: { label: '箇条書きリスト', icon: 'list' },
+            checkbox_group: { label: 'チェックリスト', icon: 'check-square' },
             fill_in_box: { label: '強調穴埋め', icon: 'box-select' },
             keywords: { label: 'ヒント語群', icon: 'tags' },
-            quote: { label: '引用文', icon: 'quote' },
-            write_box: { label: '記述枠', icon: 'pen-tool' },
-            self_eval: { label: '自己評価枠', icon: 'check-square' }
+            quote: { label: '引用文・感想', icon: 'quote' },
+            write_box: { label: '記述・スケッチ枠', icon: 'pen-tool' },
+            self_eval: { label: 'ふりかえり・自己評価', icon: 'smile' }
         };
 
         const defaultData = {
-            title: "社会科：国の政治「国会のはたらきと仕組み」",
-            defaultPageBreaks: ["s2"],
+            title: "算数科：問題解決過程「面積の求め方を考えよう」",
+            defaultPageBreaks: ["s3"],
             answers: {
-                s1_1: "最高機関", s1_2: "立法機関", s2_1: "衆議院", s2_2: "参議院", s2_3: "二院制",
-                box_diet_role: "（例）法律を作ることは、国民のルールを決めることなので、国民の代表が集まる国会が一番大切な役割を持っていると思う。",
-                box_life_law: "【道路交通法】を選びました。この法律があるおかげで、車や歩行者が安全に道をとおることができます。",
-                box_summary: "国会は、国民の代表が集まって法律や予算を決める「国の最高機関」であることを学んだ。"
+                ans_formula: "たて×横",
+                box_idea: "（例）対角線で２つの三角形に分けて、それぞれの面積を計算してから足し合わせる方法があると考えました。",
+                box_summary: "平行四辺形の面積は、形を変形して長方形にすることで、「底辺×高さ」で求められることがわかりました。"
             },
             sections: [
                 {
-                    id: "s1", title: "1. 国会の役割を調べよう", criteria: "【知技】国会の地位と役割を理解している。", layout: "1-col",
+                    id: "s1", title: "1. 本時の学習課題", criteria: "【知技】めあてを把握し、既習事項を想起できる。", layout: "1-col",
                     blocks: [
-                        { type: "text", content: "憲法では、国会は「国の権力の（{{s1_1}}）」であり、国のみが法律を作ることができる「唯一の（{{s1_2}}）」であると定められています。", bold: false },
-                        { type: "write_box", label: "なぜ国会は「国の最高機関」と呼ばれているのでしょうか？理由を考えて書きましょう。", boxId: "box_diet_role", defaultHeight: 120 }
+                        { type: "aim_box", content: "平行四辺形の面積の求め方を、今まで習った形に変形して考えよう。" },
+                        { type: "text", content: "長方形の面積を求める公式は、（{{ans_formula}}）でしたね。これを活用できないか予想してみましょう。", bold: false, fontSize: "text-lg" },
+                        { type: "keywords", words: ["長方形", "三角形", "切って動かす", "公式"] }
                     ]
                 },
                 {
-                    id: "s2", title: "2. 二つの議院の仕組み", criteria: "【知技】衆議院と参議院の仕組みを理解している。", layout: "2-col",
+                    id: "s2", title: "2. 自力解決：自分の考えを書こう", criteria: "【思判表】図や式を用いて論理的に思考し、表現している。", layout: "1-col",
+                    blocks: [
+                        { type: "write_box", label: "どのように変形すれば面積が求められるか、図や式を使ってかきましょう。", boxId: "box_idea", defaultHeight: 200, bgType: "grid_medium" },
+                        { type: "checkbox_group", label: "思考のチェックポイント", items: ["補助線を引いて考えた", "図形を切って動かした", "式と答えを書いた"] }
+                    ]
+                },
+                {
+                    id: "s3", title: "3. 比較検討・練り上げ", criteria: "【思判表】他者の考えと比較し、共通点や違いを見出している。", layout: "2-col",
                     leftBlocks: [
-                        { type: "text", content: "日本の国会は（{{s2_1}}）と（{{s2_2}}）の二つの議院から成り立っています。", bold: true },
-                        { type: "keywords", words: ["国民の代表", "選挙", "話し合い", "慎重な審議"] }
+                        { type: "quote", content: "Ａさんの考え：\n「はしっこの三角形を切り取って、反対側にくっつけると長方形になります。」" }
                     ],
                     rightBlocks: [
-                        { type: "text", content: "この仕組みを（{{s2_3}}）といいます。", bold: true },
-                        { type: "bullets", items: ["衆議院：任期4年（解散あり）", "参議院：任期6年（解散なし）"] }
+                        { type: "quote", content: "Ｂさんの考え：\n「真ん中で半分に切って、２つの形を組み合わせると長方形になります。」" }
                     ]
                 },
                 {
-                    id: "s3", title: "3. 法律と私たちの暮らし", criteria: "【思判表】法律が国民生活に果たす役割を考えている。", layout: "1-col",
+                    id: "s4", title: "4. 本時のまとめと振り返り", criteria: "【学向人】学習を省察し、次の学びへの意欲を持っている。", layout: "1-col",
                     blocks: [
-                        { type: "quote", content: "国会では、毎年150本程度の新しい法律案が話し合われています。法律は、国民の権利を守り、社会の秩序を維持するために作られます。" },
-                        { type: "write_box", label: "身近な法律を一つ選び、その法律が私たちの暮らしをどう守っているか書きましょう。", boxId: "box_life_law", defaultHeight: 180 }
-                    ]
-                },
-                {
-                    id: "s4", title: "4. まとめと振り返り", criteria: "本時の学習のまとめ", layout: "1-col",
-                    blocks: [
-                        { type: "write_box", label: "国会のはたらきについて、重要だと思ったことを中心にまとめましょう。", boxId: "box_summary", defaultHeight: 220 },
+                        { type: "write_box", label: "今日の授業でわかった「平行四辺形の面積の公式」をまとめましょう。", boxId: "box_summary", defaultHeight: 120, bgType: "lines" },
                         { type: "self_eval" }
                     ]
                 }
@@ -129,21 +136,28 @@
             const [worksheetData, setWorksheetData] = useState(defaultData);
             const [history, setHistory] = useState([JSON.parse(JSON.stringify(defaultData))]);
             const [historyIndex, setHistoryIndex] = useState(0);
-            const [paperSize, setPaperSize] = useState('B5');
+            const [paperSize, setPaperSize] = useState('A4');
             const [mode, setMode] = useState('student');
             const [pageBreaks, setPageBreaks] = useState(defaultData.defaultPageBreaks || []);
             const [boxHeights, setBoxHeights] = useState({});
             const [overflows, setOverflows] = useState({});
             const [selectedFont, setSelectedFont] = useState('kyokasho');
             const [showHelp, setShowHelp] = useState(false);
-            const [isPanelOpen, setIsPanelOpen] = useState(true); // パネル開閉用ステート
-            const fileInputRef = useRef(null);
+            const [isPanelOpen, setIsPanelOpen] = useState(true);
+            
+            const [showPromptModal, setShowPromptModal] = useState(false);
+            const [promptText, setPromptText] = useState("");
+            const [copyMessage, setCopyMessage] = useState("");
+
+            const [showImportModal, setShowImportModal] = useState(false);
+            const [importText, setImportText] = useState("");
+            const [importError, setImportError] = useState("");
 
             const fontOptions = [
-                { value: 'kyokasho', label: '教科書体', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
+                { value: 'kyokasho', label: '教科書体 (推奨)', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
                 { value: 'klee', label: 'Klee One (手書き風)', family: "'Klee One', 'BIZ UDKyokasho', 'Meiryo', sans-serif" },
-                { value: 'gothic', label: 'ゴシック体', family: "'Noto Sans JP', 'Meiryo', sans-serif" },
-                { value: 'mincho', label: '明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" }
+                { value: 'gothic', label: 'UD ゴシック体', family: "'Noto Sans JP', 'Meiryo', sans-serif" },
+                { value: 'mincho', label: 'UD 明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" }
             ];
 
             useEffect(() => {
@@ -198,12 +212,14 @@
                 updateData(d => {
                     const newId = `key_${Date.now()}`;
                     let newBlock = { type };
+                    if (type === 'aim_box') newBlock = { type, content: "本時のめあてを入力" };
                     if (type === 'text') newBlock = { type, content: "新しいテキスト", bold: false, fontSize: "text-base", textAlign: "text-left" };
                     if (type === 'bullets') newBlock = { type, items: ["項目1"] };
+                    if (type === 'checkbox_group') newBlock = { type, label: "確認項目", items: ["チェック1"] };
                     if (type === 'fill_in_box') newBlock = { type, label: "問い", answerKey: newId };
                     if (type === 'keywords') newBlock = { type, words: ["キーワード"] };
                     if (type === 'quote') newBlock = { type, content: "引用文" };
-                    if (type === 'write_box') newBlock = { type, label: "問い", boxId: newId, defaultHeight: 120 };
+                    if (type === 'write_box') newBlock = { type, label: "問い", boxId: newId, defaultHeight: 120, bgType: "lines" };
                     
                     if (!d.sections[sIdx][col]) d.sections[sIdx][col] = [];
                     d.sections[sIdx][col].push(newBlock);
@@ -273,16 +289,27 @@
                 }
             });
 
-            const handleFileUpload = (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const data = JSON.parse(event.target.result);
-                        if (data.sections && data.answers) { setWorksheetData(data); setHistory([JSON.parse(JSON.stringify(data))]); setHistoryIndex(0); }
-                    } catch (err) { alert("JSON読み込み失敗"); }
-                };
-                reader.readAsText(file); e.target.value = '';
+            const handleImportJson = () => {
+                if (!importText.trim()) {
+                    setImportError("JSONテキストを入力してください。");
+                    return;
+                }
+                try {
+                    const data = JSON.parse(importText);
+                    if (data.sections && data.answers) { 
+                        setWorksheetData(data); 
+                        setHistory([JSON.parse(JSON.stringify(data))]); 
+                        setHistoryIndex(0);
+                        setPageBreaks(data.defaultPageBreaks || []);
+                        setShowImportModal(false);
+                        setImportText("");
+                        setImportError("");
+                    } else {
+                        setImportError("無効なデータ形式です。sectionsとanswersが必要です。");
+                    }
+                } catch (err) { 
+                    setImportError("JSONの読み込みに失敗しました。形式が正しいか確認してください。"); 
+                }
             };
 
             const handleDownloadJson = () => {
@@ -300,6 +327,49 @@
                     process(s.blocks); process(s.leftBlocks); process(s.rightBlocks);
                 });
                 setBoxHeights(newHeights);
+            };
+
+            const openPromptModal = () => {
+                setPromptText(
+`あなたはプロの教員であり、優秀な教材設計エンジニアです。
+教育学的知見（学力の三要素、評価の三観点、個別最適な学びと協同的な学び）に基づき、児童の思考プロセスを構造化するワークシートを作成してください。
+
+【テーマ・対象】
+小学校〇年生 〇〇科
+「〇〇」
+
+【設計の要件・制約】
+1. 指定されたJSONのデータ構造（sections, answers）を厳密に維持してください。
+2. 以下のブロック（type）を駆使して学習活動を構成してください：
+   - "aim_box": 授業の導入で示される問い（めあて）。
+   - "text": 資料の提示や説明（穴埋めは {{キー名}} を使用）。
+   - "keywords": 児童の認知を助けるヒント語彙バンク。
+   - "checkbox_group": 気付きや観察、思考のチェックポイント。
+   - "write_box": 記述やスケッチを行う自力解決エリア。必ず "bgType" を指定すること（"lines": 罫線, "grid_large": 低学年用20mmマス, "grid_medium": 中学年用15mmマス, "grid_small": 高学年用10mmマス, "blank": 無地）。
+   - "self_eval": 学習の省察と次への意欲を形成する振り返り欄（末尾に配置）。
+3. 穴埋め（text内）や write_box の模範解答は、必ず answers オブジェクトに含めてください。
+4. 出力は純粋なJSONテキストのみとし、Markdown記法（\`\`\`json など）は絶対に除外してください。
+
+【参考にするフォーマット（現在のデータ）】
+${JSON.stringify(worksheetData, null, 2)}`
+                );
+                setShowPromptModal(true);
+                setCopyMessage("");
+            };
+
+            const handleCopyPrompt = () => {
+                const textarea = document.createElement('textarea');
+                textarea.value = promptText;
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    setCopyMessage("クリップボードにコピーしました！ChatGPTやClaudeなどに貼り付けてご活用ください。");
+                } catch (err) {
+                    setCopyMessage("コピーに失敗しました。手動でテキストを選択してコピーしてください。");
+                }
+                document.body.removeChild(textarea);
+                setTimeout(() => setCopyMessage(""), 3000);
             };
 
             const renderTextWithBlanks = (text) => {
@@ -346,7 +416,6 @@
                     return (
                         <div key={bIdx} className="mb-4 relative font-sans bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                             
-                            {/* ブロックヘッダー（操作メニュー） */}
                             <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
                                 <div className="flex items-center gap-1.5 text-blue-600">
                                     <Icon name={info.icon} size={16} />
@@ -361,6 +430,13 @@
                             </div>
                             
                             <div className="p-4">
+                                {block.type === 'aim_box' && (
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">めあての文章</label>
+                                        <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none" rows="2" placeholder="めあてを入力"></textarea>
+                                    </div>
+                                )}
+
                                 {block.type === 'text' && (
                                     <div className="space-y-3">
                                         <div>
@@ -375,7 +451,7 @@
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-500 font-bold"><Icon name="type" size={14} className="inline"/> サイズ:</span>
                                                 <select value={block.fontSize || 'text-base'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].fontSize = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200">
-                                                    <option value="text-xs">極小</option><option value="text-sm">小</option><option value="text-base">標準</option><option value="text-lg">大</option><option value="text-xl">特大</option>
+                                                    <option value="text-xs">極小 (9pt~)</option><option value="text-sm">小 (10pt~)</option><option value="text-base">標準 (12pt~)</option><option value="text-lg">大 (16pt~)</option><option value="text-xl">特大 (22pt~)</option>
                                                 </select>
                                             </div>
                                             <div className="h-5 w-px bg-slate-300 hidden sm:block"></div>
@@ -402,6 +478,23 @@
                                     </div>
                                 )}
 
+                                {block.type === 'checkbox_group' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">チェックリストのタイトル</label>
+                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="確認項目" />
+                                        </div>
+                                        <label className="block text-[10px] font-bold text-slate-500 mt-2 mb-1">チェック項目</label>
+                                        {(block.items || []).map((item, i) => (
+                                            <div key={i} className="flex gap-2 items-center">
+                                                <input value={item} onChange={e => updateData(d => { d.sections[sIdx][col][bIdx].items[i] = e.target.value; })} className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
+                                                <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.splice(i, 1); })} className="text-rose-500 hover:text-rose-700 p-2 bg-rose-50 rounded-lg active:scale-95"><Icon name="minus-circle" size={18}/></button>
+                                            </div>
+                                        ))}
+                                        <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.push("新項目"); })} className="text-blue-600 text-sm font-bold flex items-center gap-1.5 p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg w-max transition-colors active:scale-95"><Icon name="plus-circle" size={18}/> 項目を追加</button>
+                                    </div>
+                                )}
+
                                 {block.type === 'fill_in_box' && (
                                     <div className="space-y-3">
                                         <div>
@@ -418,9 +511,21 @@
                                 {block.type === 'write_box' && (
                                     <div className="space-y-3">
                                         <div>
-                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">記述の問い</label>
-                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="記述の問い" />
+                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">記述・スケッチの問い</label>
+                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="何を書きますか？" />
                                         </div>
+                                        
+                                        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                                            <span className="text-slate-500 font-bold text-xs"><Icon name="layout-grid" size={14} className="inline"/> 背景タイプ:</span>
+                                            <select value={block.bgType || 'lines'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bgType = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200 text-xs">
+                                                <option value="lines">罫線 (ノート風)</option>
+                                                <option value="grid_large">方眼 (低学年用 20mm)</option>
+                                                <option value="grid_medium">方眼 (中学年用 15mm)</option>
+                                                <option value="grid_small">方眼 (高学年用 10mm)</option>
+                                                <option value="blank">無地 (スケッチ・自由枠)</option>
+                                            </select>
+                                        </div>
+
                                         <div className="flex flex-col gap-2 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
                                             <span className="font-bold text-red-600 text-[10px] uppercase">模範解答例:</span>
                                             <textarea value={(worksheetData.answers && worksheetData.answers[block.boxId]) || ''} onChange={e => updateAnswer(block.boxId, e.target.value)} className="w-full border border-red-200 rounded-lg p-3 bg-white outline-none focus:ring-2 focus:ring-red-300 text-red-700 font-bold" rows="3" placeholder="解答例を入力"></textarea>
@@ -430,15 +535,15 @@
                                 
                                 {block.type === 'keywords' && (
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">語句（カンマで区切る）</label>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">ヒント語群（カンマで区切る）</label>
                                         <input value={(block.words || []).join(', ')} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].words = e.target.value.split(',').map(s=>s.trim()))} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="語句1, 語句2..." />
                                     </div>
                                 )}
                                 
                                 {block.type === 'quote' && (
                                     <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">引用文</label>
-                                        <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none" rows="3" placeholder="引用文を入力"></textarea>
+                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">引用文・初発の感想など</label>
+                                        <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none" rows="3" placeholder="テキストを入力"></textarea>
                                     </div>
                                 )}
                                 
@@ -449,13 +554,15 @@
                 }
 
                 switch (block.type) {
+                    case 'aim_box': return <div key={bIdx} className="mb-6 p-4 sm:p-5 bg-white border-2 border-slate-800 rounded-xl relative shadow-sm mt-2"><div className="absolute -top-3.5 left-4 bg-slate-800 text-white text-xs font-black px-4 py-1.5 rounded-full tracking-widest flex items-center gap-1.5"><Icon name="target" size={14}/>めあて</div><p className="font-bold text-lg sm:text-xl text-slate-800 leading-relaxed mt-2 text-center">{renderTextWithBlanks(block.content || '')}</p></div>;
                     case 'text': return <div key={bIdx} className={`mb-4 ${block.bold ? 'font-bold text-slate-800' : 'text-slate-700'} ${block.fontSize || 'text-base'} ${block.textAlign || 'text-left'} leading-relaxed`}>{renderTextWithBlanks(block.content || '')}</div>;
-                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1.5 text-slate-300">●</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
+                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4 text-base">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1 text-slate-400">●</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
+                    case 'checkbox_group': return <div key={bIdx} className="mb-6"><p className="font-bold text-sm text-slate-600 mb-3 flex items-center gap-2"><Icon name="check-square" size={16}/>{block.label || '確認項目'}</p><div className="flex flex-col gap-2.5">{(block.items || []).map((item, i) => <label key={i} className="flex items-start gap-3 cursor-pointer group"><div className="w-5 h-5 border-2 border-slate-300 rounded flex items-center justify-center mt-0.5 group-hover:border-slate-500 transition-colors"></div><span className="text-slate-700 leading-snug">{renderTextWithBlanks(item)}</span></label>)}</div></div>;
                     case 'fill_in_box': return <div key={bIdx} className="mt-4 mb-4"><label className="block text-sm font-bold mb-2 text-slate-500 italic">{block.label || ''}</label><div className="border-4 border-double border-slate-300 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[block.answerKey]) || '') : '　　　　　'}</span> ）</div></div>;
-                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">ヒント語群</span><div className="flex flex-wrap gap-2">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">{w}</span>)}</div></div>;
-                    case 'quote': return <div key={bIdx} className="bg-blue-50/50 p-5 rounded-2xl border-l-8 border-blue-200 text-sm italic leading-loose mb-6 text-slate-600">{block.content || ''}</div>;
-                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-6"><p className="font-bold text-base text-slate-800 leading-relaxed">{block.label || ''}</p><div className="write-box p-5 text-base leading-relaxed overflow-hidden group" style={{ height: `${boxHeights[block.boxId] || 120}px`, backgroundImage: 'linear-gradient(to bottom, transparent 95%, #f4f7fa 95%)', backgroundSize: '100% 1.4em' }}>{mode === 'teacher' && <span className="text-red-600 block fade-in">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/95 p-1.5 rounded-xl border shadow-md font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-28)}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="minus" size={16}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: (p[block.boxId]||120)+28}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="plus" size={16}/></button></div></div></div>;
-                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-8 mb-2 font-sans border-t border-slate-100 pt-6"><div className="text-[10px] text-slate-400 font-bold flex gap-4"><span>学習のふり返り： 満足(A) ・ おおむね満足(B) ・ もう少し(C)</span></div><div className="border-2 border-slate-200 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-slate-50 rounded-lg"><span className="font-bold text-slate-300">確認印</span></div></div>;
+                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">ヒント語彙</span><div className="flex flex-wrap gap-2">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-600 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">{w}</span>)}</div></div>;
+                    case 'quote': return <div key={bIdx} className="bg-slate-50/80 p-5 rounded-2xl border-l-4 border-slate-400 text-base leading-loose mb-6 text-slate-700 relative"><Icon name="quote" className="absolute top-3 left-3 text-slate-200 opacity-50" size={32}/><div className="relative z-10">{renderTextWithBlanks(block.content || '')}</div></div>;
+                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-6"><p className="font-bold text-base text-slate-800 leading-relaxed">{block.label || ''}</p><div className={`write-box p-5 text-base leading-relaxed overflow-hidden group bg-${block.bgType || 'lines'}`} style={{ height: `${boxHeights[block.boxId] || 120}px` }}>{mode === 'teacher' && <span className="text-red-600 font-bold block fade-in relative z-10">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/95 p-1.5 rounded-xl border shadow-md font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-28)}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="minus" size={16}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: (p[block.boxId]||120)+28}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="plus" size={16}/></button></div></div></div>;
+                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-8 mb-2 font-sans border-t-2 border-slate-100 pt-6"><div className="flex flex-col gap-2"><span className="text-xs text-slate-500 font-bold flex items-center gap-1.5"><Icon name="smile" size={16}/> 今日の学習をふり返ろう</span><div className="flex gap-4 text-[10px] text-slate-400 font-bold"><span>よくわかった(A)</span><span>だいたいわかった(B)</span><span>もう少し(C)</span></div></div><div className="border-2 border-slate-200 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-slate-50 rounded-lg"><span className="font-bold text-slate-300">確認印</span></div></div>;
                     default: return null;
                 }
             };
@@ -503,11 +610,11 @@
                                         </ul>
                                     </section>
                                     <section>
-                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="edit-3" size={20}/> 編集のコツ</h3>
+                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="edit-3" size={20}/> 教育的デザインのコツ</h3>
                                         <ul className="list-disc pl-5 space-y-2">
-                                            <li>テキストの中で <code>{`{{任意の文字}}`}</code> と書くと、自動的に穴埋め問題になります。（例： <code>{`日本の首都は{{東京}}です。`}</code>）</li>
-                                            <li>各ブロックの右上にあるボタンで、移動 <Icon name="chevron-up" size={14} className="inline text-slate-400"/>・複製 <Icon name="copy" size={14} className="inline text-slate-400"/>・削除 <Icon name="x" size={14} className="inline text-slate-400"/> ができます。</li>
-                                            <li>大問ごとに「1カラム」か「2カラム（左右分割）」かを選べます。</li>
+                                            <li><b>めあての明示：</b> 授業の導入で「めあて・課題」ブロックを使い、目標を明確にします。</li>
+                                            <li><b>マス目の選択：</b> 「記述・スケッチ枠」では、発達段階に応じて背景（大きなマス目、罫線、無地など）を選ぶことができます。</li>
+                                            <li><b>スキャフォールディング：</b> 「ヒント語群」や「チェックリスト」を活用して、自力解決のハードルを調整します。</li>
                                         </ul>
                                     </section>
                                     <section>
@@ -515,13 +622,6 @@
                                         <ul className="list-disc pl-5 space-y-2">
                                             <li>「生徒用」または「解答付」モードの時、記述枠の右下にある ＋/－ ボタンを押すと、枠の高さを自由に調整できます。</li>
                                             <li>操作パネルの <Icon name="maximize" size={14} className="inline bg-amber-50 text-amber-600 p-0.5 rounded border border-amber-200" /> ボタンを押すと、すべての枠の高さを初期状態にリセットできます。</li>
-                                        </ul>
-                                    </section>
-                                    <section>
-                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="save" size={20}/> 保存と読み込み</h3>
-                                        <ul className="list-disc pl-5 space-y-2">
-                                            <li>作成したワークシートは「保存」ボタンからJSONファイルとしてPCに保存できます。</li>
-                                            <li>別の日に編集を再開したい時や、他の先生と共有したい時は「読込」ボタンからそのファイルを開いてください。</li>
                                         </ul>
                                     </section>
                                 </div>
@@ -532,11 +632,83 @@
                         </div>
                     )}
 
+                    {/* JSONインポートモーダル */}
+                    {showImportModal && (
+                        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                        <Icon name="file-json" className="text-blue-500"/> JSONデータ読み込み
+                                    </h2>
+                                    <button onClick={() => setShowImportModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
+                                </div>
+                                <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+                                    <p className="text-sm text-slate-600 font-bold">
+                                        AIが出力したJSONテキスト、または保存したファイルの中身をここに貼り付けてください。<br/>
+                                        <span className="text-rose-600">※現在のワークシートの内容は上書きされます。</span>
+                                    </p>
+                                    <textarea 
+                                        value={importText} 
+                                        onChange={e => {setImportText(e.target.value); setImportError("");}} 
+                                        className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-blue-200 outline-none resize-none bg-slate-50 min-h-[300px]"
+                                        placeholder='{"title": "...", "sections": [...]}'
+                                    ></textarea>
+                                    {importError && (
+                                        <div className="bg-rose-50 text-rose-600 px-4 py-3 rounded-lg text-sm font-bold border border-rose-200 flex items-center gap-2">
+                                            <Icon name="alert-circle" size={18}/> {importError}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                                    <button onClick={() => setShowImportModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">キャンセル</button>
+                                    <button onClick={handleImportJson} className="bg-blue-600 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-lg active:scale-95 flex items-center gap-2">
+                                        <Icon name="upload" size={18}/> 読み込む
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* AIプロンプトモーダル */}
+                    {showPromptModal && (
+                        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                        <Icon name="sparkles" className="text-amber-500"/> AI生成用プロンプト出力
+                                    </h2>
+                                    <button onClick={() => setShowPromptModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
+                                </div>
+                                <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+                                    <p className="text-sm text-slate-600 font-bold">
+                                        以下のテキストをChatGPTやClaudeなどのAIに貼り付けることで、このアプリで読み込める形式の新しい教材データを自動生成できます。<br/>
+                                        <span className="text-amber-600">※【テーマ・対象】の部分を自由に書き換えてからコピーしてください。</span>
+                                    </p>
+                                    <textarea 
+                                        value={promptText} 
+                                        onChange={e => setPromptText(e.target.value)} 
+                                        className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-amber-200 outline-none resize-none bg-slate-50 min-h-[300px]"
+                                    ></textarea>
+                                    {copyMessage && (
+                                        <div className="bg-emerald-50 text-emerald-600 px-4 py-3 rounded-lg text-sm font-bold border border-emerald-200 text-center animate-pulse flex items-center justify-center gap-2">
+                                            <Icon name="check-circle" size={18}/> {copyMessage}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                                    <button onClick={() => setShowPromptModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">閉じる</button>
+                                    <button onClick={handleCopyPrompt} className="bg-amber-500 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-amber-600 transition-colors shadow-lg active:scale-95 flex items-center gap-2">
+                                        <Icon name="copy" size={18}/> プロンプトをコピー
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 操作パネル */}
                     {isPanelOpen ? (
                         <div className="max-w-6xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-3xl shadow-2xl no-print border border-slate-200 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-5 relative transition-all duration-300">
                             
-                            {/* パネルを閉じるボタン */}
                             <button 
                                 onClick={() => setIsPanelOpen(false)} 
                                 className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-2 shadow-lg hover:bg-slate-700 transition-colors z-50"
@@ -546,8 +718,8 @@
                             </button>
 
                             <div className="flex flex-col">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9</h1>
-                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">Card UI Editor</span>
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9.1</h1>
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">Educational Format Spec</span>
                             </div>
                             
                             <div className="flex flex-wrap items-center gap-3">
@@ -562,13 +734,16 @@
                                 <div className="hidden sm:block w-px h-10 bg-slate-200 mx-2"></div>
 
                                 <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                                    <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
-                                    <button onClick={() => fileInputRef.current.click()} className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-95 transition-transform"><Icon name="folder-open" size={16}/>読込</button>
+                                    <button onClick={() => {setShowImportModal(true); setImportText(""); setImportError("");}} className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-95 transition-transform"><Icon name="file-json" size={16}/>JSON読込</button>
                                     <button onClick={handleDownloadJson} className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-100 active:scale-95 transition-transform"><Icon name="save" size={16}/>保存</button>
                                 </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
+                                <button onClick={openPromptModal} className="px-4 py-2.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-xl hover:bg-amber-100 flex items-center justify-center transition-colors shadow-sm text-xs sm:text-sm font-bold gap-2 active:scale-95" title="AI用プロンプトを生成">
+                                    <Icon name="sparkles" size={16}/> AIプロンプト
+                                </button>
+                                
                                 <button onClick={() => setShowHelp(true)} className="p-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl hover:bg-indigo-100 flex items-center justify-center transition-colors shadow-sm" title="使い方ガイド"><Icon name="help-circle" size={18}/></button>
                                 
                                 {mode === 'edit' && (
@@ -617,7 +792,6 @@
                                 </div>
 
                                 <div className="p-12 sm:p-16 page-content h-full">
-                                    {/* タイトル領域 */}
                                     {pageIdx === 0 && (
                                         <div className="mb-10 border-b-4 border-slate-800 pb-4 relative">
                                             {mode === 'edit' ? (
@@ -632,7 +806,6 @@
                                         </div>
                                     )}
 
-                                    {/* 各セクション */}
                                     {pageSections.map((section) => {
                                         const sIdx = worksheetData.sections.findIndex(s => s.id === section.id);
                                         const is2Col = section.layout === '2-col';
@@ -722,7 +895,6 @@
                                     )}
                                 </div>
                                 
-                                {/* ページ溢れ警告 */}
                                 {overflows[pageIdx] && (
                                     <div className="absolute bottom-10 left-1/2 -translate-x-1/2 no-print flex items-center gap-3 bg-red-600 text-white px-8 py-3 rounded-full font-black shadow-2xl animate-bounce z-[60] border-4 border-white/20">
                                         <Icon name="alert-circle" size={20}/>
