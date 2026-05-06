@@ -148,6 +148,7 @@
             const [showPromptModal, setShowPromptModal] = useState(false);
             const [promptText, setPromptText] = useState("");
             const [copyMessage, setCopyMessage] = useState("");
+            const [useImageOption, setUseImageOption] = useState(false); // 追加: 画像使用オプション用ステート
 
             const [showImportModal, setShowImportModal] = useState(false);
             const [importText, setImportText] = useState("");
@@ -329,15 +330,15 @@
                 setBoxHeights(newHeights);
             };
 
-            const openPromptModal = () => {
-                setPromptText(
-`あなたはプロの教員であり、優秀な教材設計エンジニアです。
+            // AIプロンプト生成ロジックを関数化し、画像オプションに対応
+            const generatePrompt = (useImg, data) => {
+                return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
 教育学的知見（学力の三要素、評価の三観点、個別最適な学びと協同的な学び）に基づき、児童の思考プロセスを構造化するワークシートを作成してください。
 
 【テーマ・対象】
 小学校〇年生 〇〇科
 「〇〇」
-
+${useImg ? '\n※添付された教科書や資料の画像がある場合は、OCRで内容（テキストや重要な発問、図解の意図など）を読み取り、学習内容に沿ってワークシートを構成してください。\n' : ''}
 【設計の要件・制約】
 1. 指定されたJSONのデータ構造（sections, answers）を厳密に維持してください。
 2. 以下のブロック（type）を駆使して学習活動を構成してください：
@@ -351,8 +352,12 @@
 4. 出力は純粋なJSONテキストのみとし、Markdown記法（\`\`\`json など）は絶対に除外してください。
 
 【参考にするフォーマット（現在のデータ）】
-${JSON.stringify(worksheetData, null, 2)}`
-                );
+${JSON.stringify(data, null, 2)}`;
+            };
+
+            const openPromptModal = () => {
+                setUseImageOption(false);
+                setPromptText(generatePrompt(false, worksheetData));
                 setShowPromptModal(true);
                 setCopyMessage("");
             };
@@ -684,10 +689,34 @@ ${JSON.stringify(worksheetData, null, 2)}`
                                         以下のテキストをChatGPTやClaudeなどのAIに貼り付けることで、このアプリで読み込める形式の新しい教材データを自動生成できます。<br/>
                                         <span className="text-amber-600">※【テーマ・対象】の部分を自由に書き換えてからコピーしてください。</span>
                                     </p>
+                                    
+                                    {/* 追加: OCR連携オプション */}
+                                    <div className="flex flex-col gap-2 p-4 bg-blue-50/80 rounded-xl border border-blue-100">
+                                        <label className="flex items-center gap-3 cursor-pointer group w-max">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={useImageOption}
+                                                onChange={(e) => {
+                                                    setUseImageOption(e.target.checked);
+                                                    setPromptText(generatePrompt(e.target.checked, worksheetData));
+                                                }}
+                                                className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                                            />
+                                            <span className="text-sm font-black text-blue-800 flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
+                                                <Icon name="image" size={18}/> 教科書や資料の画像からワークシートを生成する（OCR連携）
+                                            </span>
+                                        </label>
+                                        {useImageOption && (
+                                            <p className="text-xs text-blue-600 font-bold ml-8">
+                                                ✓ プロンプトに画像の読み取り指示が追加されました。AIにこのプロンプトを貼り付ける際、一緒に教科書の画像を添付して送信してください。
+                                            </p>
+                                        )}
+                                    </div>
+
                                     <textarea 
                                         value={promptText} 
                                         onChange={e => setPromptText(e.target.value)} 
-                                        className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-amber-200 outline-none resize-none bg-slate-50 min-h-[300px]"
+                                        className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-amber-200 outline-none resize-none bg-slate-50 min-h-[200px]"
                                     ></textarea>
                                     {copyMessage && (
                                         <div className="bg-emerald-50 text-emerald-600 px-4 py-3 rounded-lg text-sm font-bold border border-emerald-200 text-center animate-pulse flex items-center justify-center gap-2">
