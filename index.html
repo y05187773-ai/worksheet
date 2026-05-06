@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V10.0 - DB Integration</title>
+    <title>教材設計エンジニア V10.6 - D&D Integration</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -55,11 +55,18 @@
         .bg-grid-medium { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 15mm 15mm; }
         .bg-grid-small { background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px); background-size: 10mm 10mm; }
         .bg-blank { background-image: none; }
+        
+        /* Auto-resize textarea */
+        textarea.auto-resize {
+            overflow: hidden;
+            min-height: 3rem;
+            resize: none;
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen">
 
-    <!-- ▼▼▼ ここに DB.csv の中身をすべて貼り付けてください ▼▼▼ -->
+    <!-- ▼▼▼ ここに DB.csv の中身を貼り付け可能です ▼▼▼ -->
     <script type="text/csv" id="csv-data">
 学年,教科,単元名・教材名,活動番号,学習活動内容,評価規準,列1,列2,,,
 1年,国語,はるが きた,1,絵を見て話したり応答したりする。,【知・技】言葉には事物の内容を表す働きがあることに気づいている。 【思・判・表】互いの話に関心をもっている。,,,,,
@@ -3217,15 +3224,15 @@
             defaultPageBreaks: [],
             answers: {
                 ans_listen: "間の取り方",
-                box_idea: "（例）わたしのすきなものは、犬です。とくに、ポメラニアンというしゅるいがすきです。理由は、ふわふわしていてかわいいからです。",
-                box_summary: "相手を見て、言葉の強弱や間に気をつけながら、自分のすきなものを紹介することができました。友達の話の中心もよくわかりました。"
+                box_idea: "（例）わたしのすきなものは、犬です。\nとくに、ポメラニアンというしゅるいがすきです。\n理由は、ふわふわしていてかわいいからです。",
+                box_summary: "相手を見て、言葉の強弱や間に気をつけながら、自分のすきなものを紹介することができました。\n友達の話の中心もよくわかりました。"
             },
             sections: [
                 {
                     id: "s1", title: "1. 本時の学習課題", criteria: "【態】積極的に自己紹介をしようとしている。", layout: "1-col",
                     blocks: [
-                        { type: "aim_box", content: "言葉の抑揚や強弱、間の取り方などに注意して、自分の「すきなもの」を順番に紹介し合おう。" },
-                        { type: "text", content: "前の人の話をくり返しながら、紹介をつなげていきます。話すときは、相手を見て、（{{ans_listen}}）に気をつけて話しましょう。", bold: false, fontSize: "text-lg" }
+                        { type: "aim_box", content: "言葉の抑揚や強弱、間の取り方などに注意して、\n自分の「すきなもの」を順番に紹介し合おう。" },
+                        { type: "text", content: "前の人の話をくり返しながら、紹介をつなげていきます。\n話すときは、相手を見て、（{{ans_listen}}）に気をつけて話しましょう。", bold: false, fontSize: "text-lg" }
                     ]
                 },
                 {
@@ -3238,10 +3245,10 @@
                 {
                     id: "s3", title: "3. 友達の話を聞いて", criteria: "【知技】相手を見て話したり聞いたりし、注意して話している。", layout: "2-col",
                     leftBlocks: [
-                        { type: "quote", content: "Ａさんのすきなものは「〇〇」でした。理由は～" }
+                        { type: "quote", content: "Ａさんのすきなものは「〇〇」でした。\n理由は～" }
                     ],
                     rightBlocks: [
-                        { type: "quote", content: "Ｂさんのすきなものは「〇〇」でした。理由は～" }
+                        { type: "quote", content: "Ｂさんのすきなものは「〇〇」でした。\n理由は～" }
                     ]
                 },
                 {
@@ -3254,56 +3261,32 @@
             ]
         };
 
-        // CSVパース関数（特殊文字や改行に対応）
         const parseCSV = (text) => {
             if (!text || text.trim() === "") return [];
-            const result = [];
-            let row = [];
-            let inQuotes = false;
-            let field = '';
+            const result = []; let row = []; let inQuotes = false; let field = '';
             for (let i = 0; i < text.length; i++) {
                 const char = text[i];
                 if (inQuotes) {
-                    if (char === '"' && text[i + 1] === '"') {
-                        field += '"';
-                        i++;
-                    } else if (char === '"') {
-                        inQuotes = false;
-                    } else {
-                        field += char;
-                    }
+                    if (char === '"' && text[i + 1] === '"') { field += '"'; i++; }
+                    else if (char === '"') inQuotes = false;
+                    else field += char;
                 } else {
-                    if (char === '"') {
-                        inQuotes = true;
-                    } else if (char === ',') {
-                        row.push(field);
-                        field = '';
-                    } else if (char === '\n' || (char === '\r' && text[i+1] === '\n')) {
+                    if (char === '"') inQuotes = true;
+                    else if (char === ',') { row.push(field); field = ''; }
+                    else if (char === '\n' || (char === '\r' && text[i+1] === '\n')) {
                         if(char === '\r') i++;
-                        row.push(field);
-                        result.push(row);
-                        row = [];
-                        field = '';
-                    } else {
-                        field += char;
-                    }
+                        row.push(field); result.push(row); row = []; field = '';
+                    } else field += char;
                 }
             }
-            if (field || row.length > 0) {
-                row.push(field);
-                result.push(row);
-            }
-            
+            if (field || row.length > 0) { row.push(field); result.push(row); }
             if(result.length < 2) return [];
             const headers = result[0].map(h => h ? h.trim() : '');
             const data = [];
             for(let i=1; i<result.length; i++) {
                 if(result[i].length === 1 && result[i][0].trim() === "") continue;
                 const obj = {};
-                for(let j=0; j<headers.length; j++) {
-                    const key = headers[j] || `列${j}`; 
-                    obj[key] = result[i][j] || '';
-                }
+                for(let j=0; j<headers.length; j++) obj[headers[j] || `列${j}`] = result[i][j] || '';
                 data.push(obj);
             }
             return data;
@@ -3326,31 +3309,26 @@
             const [showHelp, setShowHelp] = useState(false);
             const [isPanelOpen, setIsPanelOpen] = useState(true);
             
+            // ドラッグ＆ドロップ用ステート
+            const [dragInfo, setDragInfo] = useState(null); 
+
             // プロンプト生成関連ステート
             const [showPromptModal, setShowPromptModal] = useState(false);
             const [promptType, setPromptType] = useState('worksheet');
             const [promptText, setPromptText] = useState("");
             const [copyMessage, setCopyMessage] = useState("");
-            const [useImageOption, setUseImageOption] = useState(false);
-            
-            // 指導計画(CSV)連携ステート
-            const [planData, setPlanData] = useState(initialPlanData);
-            const [selectedPlanGrade, setSelectedPlanGrade] = useState("");
-            const [selectedPlanSubject, setSelectedPlanSubject] = useState("");
-            const [selectedPlanIndex, setSelectedPlanIndex] = useState("-1");
-
-            const planInputRef = useRef(null);
-
-            const [promptInputs, setPromptInputs] = useState({
-                gradeSubject: "小学校3年生 国語科",
-                theme: "「よく聞いて、じこしょうかい」",
-                aim: "相手を見て話したり聞いたりするとともに、言葉の抑揚や強弱、間の取り方などに注意して話すことができる。",
-                criteria: "【思・判・表】「話すこと・聞くこと」において、話し手が伝えたいことの中心を捉えている。"
-            });
+            const [promptInputs, setPromptInputs] = useState({ gradeSubject: "小学校3年生 国語科", theme: "「よく聞いて、じこしょうかい」", aim: "相手を見て話したり聞いたりするとともに、言葉の抑揚や強弱、間の取り方などに注意して話すことができる。", criteria: "【思・判・表】「話すこと・聞くこと」において、話し手が伝えたいことの中心を捉えている。" });
 
             const [showImportModal, setShowImportModal] = useState(false);
             const [importText, setImportText] = useState("");
             const [importError, setImportError] = useState("");
+            
+            // CSV指導計画データ連携ステート
+            const [planData, setPlanData] = useState(initialPlanData);
+            const [selectedPlanGrade, setSelectedPlanGrade] = useState("");
+            const [selectedPlanSubject, setSelectedPlanSubject] = useState("");
+            const [selectedPlanIndex, setSelectedPlanIndex] = useState("-1");
+            const planInputRef = useRef(null);
 
             const fontOptions = [
                 { value: 'kyokasho', label: '教科書体 (推奨)', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
@@ -3359,23 +3337,29 @@
                 { value: 'mincho', label: 'UD 明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" }
             ];
 
-            useEffect(() => {
+            // テキストエリアの自動リサイズ
+            const autoResizeTextarea = (e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+            };
+
+            const extractHeights = (data) => {
                 const newHeights = {};
                 const processBlocks = (blocks) => {
                     if(!blocks) return;
                     blocks.forEach(block => {
-                        if (block.type === 'write_box') {
-                            newHeights[block.boxId] = block.defaultHeight || 120;
-                        }
+                        if (block.type === 'write_box') newHeights[block.boxId] = block.defaultHeight || 120;
                     });
                 };
-                worksheetData.sections.forEach(section => {
+                data.sections.forEach(section => {
                     processBlocks(section.blocks);
                     processBlocks(section.leftBlocks);
                     processBlocks(section.rightBlocks);
                 });
-                setBoxHeights(prev => ({...newHeights, ...prev}));
-            }, [worksheetData]);
+                return newHeights;
+            };
+
+            useEffect(() => { setBoxHeights(prev => ({...extractHeights(worksheetData), ...prev})); }, [worksheetData]);
 
             useEffect(() => {
                 const timer = setTimeout(() => {
@@ -3383,14 +3367,75 @@
                     const newOverflows = {};
                     pageElements.forEach((el, idx) => {
                         const content = el.querySelector('.page-content');
-                        if (content && content.scrollHeight > el.clientHeight - 20) {
-                            newOverflows[idx] = true;
-                        }
+                        if (content && content.scrollHeight > el.clientHeight - 20) newOverflows[idx] = true;
                     });
                     setOverflows(newOverflows);
                 }, 600);
                 return () => clearTimeout(timer);
             }, [pageBreaks, paperSize, mode, boxHeights, worksheetData]);
+
+            // プロンプト生成ロジック
+            const generatePrompt = () => {
+                const base = `あなたは優秀な教材設計エンジニアです。以下の情報をもとに、小学生向けのワークシートの構成をJSON形式で出力してください。
+
+【授業情報】
+・対象・教科：${promptInputs.gradeSubject}
+・単元名・教材名：${promptInputs.theme}
+・本時のめあて：${promptInputs.aim}
+・評価規準：${promptInputs.criteria}
+
+`;
+                let formatInfo = "";
+                if (promptType === 'worksheet') {
+                    formatInfo = `【出力要件】
+以下のJSONフォーマットの例に厳密に従って出力してください。コードブロックやマークダウン装飾（\`\`\`json など）は絶対に含めず、純粋なJSON文字列のみを出力してください。
+利用可能なブロックタイプ (type): 'aim_box', 'text', 'bullets', 'checkbox_group', 'fill_in_box', 'keywords', 'quote', 'write_box', 'self_eval'
+
+{
+  "title": "${promptInputs.theme} ワークシート",
+  "answers": { "key1": "解答例1", "box_ans": "記述の解答例" },
+  "sections": [
+    {
+      "id": "s1",
+      "title": "1. めあてと課題",
+      "criteria": "評価の視点",
+      "layout": "1-col",
+      "blocks": [
+        { "type": "aim_box", "content": "めあてを入力" },
+        { "type": "text", "content": "問題文。穴埋めは {{key1}} で囲む。" },
+        { "type": "write_box", "label": "問いを入力", "boxId": "box_ans", "defaultHeight": 120, "bgType": "lines" }
+      ]
+    }
+  ]
+}`;
+                } else {
+                    formatInfo = `【出力要件】\nこの授業で使う文章教材や、子供たちに読ませるテキストの草案を作成してください。`;
+                }
+                setPromptText(base + formatInfo);
+            };
+
+            useEffect(() => { generatePrompt(); }, [promptInputs, promptType]);
+
+            // プロンプトをクリップボードにコピー
+            const handleCopyPrompt = () => {
+                const textArea = document.createElement("textarea");
+                textArea.value = promptText;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setCopyMessage("コピーしました！AIに貼り付けてください。");
+                    setTimeout(() => setCopyMessage(""), 3000);
+                } catch (err) {
+                    console.error('Fallback: Oops, unable to copy', err);
+                    setCopyMessage("コピーに失敗しました");
+                }
+                document.body.removeChild(textArea);
+            };
 
             const updateData = (updater) => {
                 const next = JSON.parse(JSON.stringify(worksheetData));
@@ -3406,6 +3451,47 @@
             const handleUndo = () => { if (historyIndex > 0) { const idx = historyIndex - 1; setHistoryIndex(idx); setWorksheetData(history[idx]); } };
             const handleRedo = () => { if (historyIndex < history.length - 1) { const idx = historyIndex + 1; setHistoryIndex(idx); setWorksheetData(history[idx]); } };
             const updateAnswer = (key, val) => updateData(d => { d.answers[key] = val; });
+
+            // Drag & Drop Handlers
+            const handleBlockDragStart = (e, sIdx, col, bIdx) => {
+                e.stopPropagation(); setDragInfo({ type: 'block', sIdx, col, bIdx }); e.dataTransfer.effectAllowed = 'move';
+            };
+            const handleSectionDragStart = (e, sIdx) => {
+                e.stopPropagation(); setDragInfo({ type: 'section', sIdx }); e.dataTransfer.effectAllowed = 'move';
+            };
+            const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); };
+            
+            const handleBlockDrop = (e, targetSIdx, targetCol, targetBIdx) => {
+                e.preventDefault(); e.stopPropagation();
+                if (!dragInfo || dragInfo.type !== 'block') return;
+                const { sIdx: sourceSIdx, col: sourceCol, bIdx: sourceBIdx } = dragInfo;
+                if (sourceSIdx === targetSIdx && sourceCol === targetCol && sourceBIdx === targetBIdx) { setDragInfo(null); return; }
+                updateData(d => {
+                    const sourceList = d.sections[sourceSIdx][sourceCol];
+                    const block = sourceList[sourceBIdx];
+                    sourceList.splice(sourceBIdx, 1);
+                    let insertIdx = targetBIdx;
+                    if (sourceSIdx === targetSIdx && sourceCol === targetCol && sourceBIdx < targetBIdx) insertIdx -= 1;
+                    const targetList = d.sections[targetSIdx][targetCol] || [];
+                    targetList.splice(insertIdx, 0, block);
+                    if (!d.sections[targetSIdx][targetCol]) d.sections[targetSIdx][targetCol] = targetList;
+                });
+                setDragInfo(null);
+            };
+            const handleSectionDrop = (e, targetSIdx) => {
+                e.preventDefault(); e.stopPropagation();
+                if (!dragInfo || dragInfo.type !== 'section') return;
+                const sourceSIdx = dragInfo.sIdx;
+                if (sourceSIdx === targetSIdx) { setDragInfo(null); return; }
+                updateData(d => {
+                    const section = d.sections[sourceSIdx];
+                    d.sections.splice(sourceSIdx, 1);
+                    let insertIdx = targetSIdx;
+                    if (sourceSIdx < targetSIdx) insertIdx -= 1;
+                    d.sections.splice(insertIdx, 0, section);
+                });
+                setDragInfo(null);
+            };
 
             const addBlock = (sIdx, type, col = 'blocks') => {
                 updateData(d => {
@@ -3442,42 +3528,8 @@
             };
 
             const removeBlock = (sIdx, bIdx, col = 'blocks') => updateData(d => { d.sections[sIdx][col].splice(bIdx, 1); });
-            const moveBlock = (sIdx, bIdx, dir, col = 'blocks') => {
-                updateData(d => {
-                    const blocks = d.sections[sIdx][col];
-                    if (dir === -1 && bIdx > 0) [blocks[bIdx-1], blocks[bIdx]] = [blocks[bIdx], blocks[bIdx-1]];
-                    else if (dir === 1 && bIdx < blocks.length - 1) [blocks[bIdx], blocks[bIdx+1]] = [blocks[bIdx+1], blocks[bIdx]];
-                });
-            };
-
             const addSection = () => updateData(d => { d.sections.push({ id: `s_${Date.now()}`, title: "新しい大問", criteria: "評価規準", layout: "1-col", blocks: [] }); });
-            const cloneSection = (sIdx) => updateData(d => {
-                const clone = JSON.parse(JSON.stringify(d.sections[sIdx]));
-                clone.id = `s_${Date.now()}`;
-                const reMapIds = (blocks) => {
-                    if(!blocks) return;
-                    blocks.forEach(b => {
-                        if (b.boxId || b.answerKey) {
-                            const oldId = b.boxId || b.answerKey;
-                            const newId = `key_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-                            if (b.boxId) b.boxId = newId;
-                            if (b.answerKey) b.answerKey = newId;
-                            d.answers[newId] = d.answers[oldId] || "";
-                        }
-                    });
-                };
-                reMapIds(clone.blocks);
-                reMapIds(clone.leftBlocks);
-                reMapIds(clone.rightBlocks);
-                d.sections.splice(sIdx + 1, 0, clone);
-            });
-
             const removeSection = (sIdx) => updateData(d => { d.sections.splice(sIdx, 1); });
-            const moveSection = (sIdx, dir) => updateData(d => {
-                if (dir === -1 && sIdx > 0) [d.sections[sIdx-1], d.sections[sIdx]] = [d.sections[sIdx], d.sections[sIdx-1]];
-                else if (dir === 1 && sIdx < d.sections.length - 1) [d.sections[sIdx], d.sections[sIdx+1]] = [d.sections[sIdx+1], d.sections[sIdx]];
-            });
-
             const toggleLayout = (sIdx) => updateData(d => {
                 const s = d.sections[sIdx];
                 if (s.layout === '2-col') {
@@ -3489,26 +3541,15 @@
             });
 
             const handleImportJson = () => {
-                if (!importText.trim()) {
-                    setImportError("JSONテキストを入力してください。");
-                    return;
-                }
+                if (!importText.trim()) { setImportError("JSONテキストを入力してください。"); return; }
                 try {
                     const data = JSON.parse(importText);
                     if (data.sections && data.answers) { 
-                        setWorksheetData(data); 
-                        setHistory([JSON.parse(JSON.stringify(data))]); 
-                        setHistoryIndex(0);
-                        setPageBreaks(data.defaultPageBreaks || []);
-                        setShowImportModal(false);
-                        setImportText("");
-                        setImportError("");
-                    } else {
-                        setImportError("無効なデータ形式です。sectionsとanswersが必要です。");
-                    }
-                } catch (err) { 
-                    setImportError("JSONの読み込みに失敗しました。形式が正しいか確認してください。"); 
-                }
+                        setWorksheetData(data); setHistory([JSON.parse(JSON.stringify(data))]); setHistoryIndex(0);
+                        setPageBreaks(data.defaultPageBreaks || []); setBoxHeights(extractHeights(data));
+                        setShowImportModal(false); setImportText(""); setImportError("");
+                    } else setImportError("無効なデータ形式です。sectionsとanswersが必要です。");
+                } catch (err) { setImportError("JSONの読み込みに失敗しました。形式が正しいか確認してください。"); }
             };
 
             const handleDownloadJson = () => {
@@ -3516,167 +3557,17 @@
                 const a = document.createElement('a'); a.href = dataStr; a.download = `worksheet_${Date.now()}.json`; a.click();
             };
 
-            const resetBoxHeights = () => {
-                const newHeights = {};
-                const process = (blocks) => {
-                    if(!blocks) return;
-                    blocks.forEach(b => { if(b.type === 'write_box') newHeights[b.boxId] = b.defaultHeight || 120; });
-                };
-                worksheetData.sections.forEach(s => {
-                    process(s.blocks); process(s.leftBlocks); process(s.rightBlocks);
-                });
-                setBoxHeights(newHeights);
-            };
+            const resetBoxHeights = () => setBoxHeights(extractHeights(worksheetData));
 
-            const handlePlanUpload = (e) => {
-                const file = e.target.files[0];
-                if(!file) return;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const parsed = parseCSV(event.target.result);
-                        if(parsed.length > 0 && (parsed[0]['単元名・教材名'] || parsed[0]['単元名'] || parsed[0]['教材名'])) {
-                            setPlanData(parsed);
-                            setSelectedPlanGrade("");
-                            setSelectedPlanSubject("");
-                            alert(`${parsed.length}件の指導計画を読み込みました。`);
-                        } else {
-                            alert("CSVの形式が正しくありません。「単元名・教材名」または「単元名」列が含まれているか確認してください。");
-                        }
-                    } catch(err) {
-                        alert("CSVの読み込みに失敗しました。");
-                    }
-                };
-                reader.readAsText(file);
-                e.target.value = ''; // Reset
-            };
-
-            // CSVデータからの抽出とフィルタリング
+            // CSVデータ解析
             const availableGrades = [...new Set(planData.map(p => p['学年']?.trim()).filter(Boolean))];
             const availableSubjects = [...new Set(planData.map(p => (p['教科'] || p['教科名'])?.trim()).filter(Boolean))];
-
             const filteredPlans = planData.map((plan, index) => ({ plan, index })).filter(({ plan }) => {
-                const grade = plan['学年']?.trim();
-                const subj = (plan['教科'] || plan['教科名'])?.trim();
-                const matchGrade = selectedPlanGrade === "" || grade === selectedPlanGrade;
-                const matchSubject = selectedPlanSubject === "" || subj === selectedPlanSubject;
-                return matchGrade && matchSubject;
+                const grade = plan['学年']?.trim(); const subj = (plan['教科'] || plan['教科名'])?.trim();
+                return (selectedPlanGrade === "" || grade === selectedPlanGrade) && (selectedPlanSubject === "" || subj === selectedPlanSubject);
             });
 
-            // フィルター条件が変わったら単元選択をリセット
-            useEffect(() => {
-                setSelectedPlanIndex("-1");
-            }, [selectedPlanGrade, selectedPlanSubject, planData]);
-
-            const handlePlanSelect = (e) => {
-                const val = e.target.value;
-                setSelectedPlanIndex(val);
-                const idx = parseInt(val, 10);
-                if(idx === -1) return;
-                const plan = planData[idx];
-                
-                const subject = plan['教科'] || plan['教科名'] || '国語科';
-                const themeStr = plan['単元名・教材名'] || plan['単元名'] || plan['教材名'] || '';
-                const aimStr = plan['指導目標'] || plan['ねらい'] || plan['学習活動内容'] || plan['活動内容'] || '';
-
-                const newInputs = {
-                    ...promptInputs,
-                    gradeSubject: (plan['学年'] || '') + ' ' + subject,
-                    theme: themeStr,
-                    aim: aimStr,
-                    criteria: plan['評価規準'] || ''
-                };
-                setPromptInputs(newInputs);
-                setPromptText(generatePrompt(promptType, useImageOption, worksheetData, newInputs));
-            };
-
-            const generatePrompt = (type, useImg, data, inputs) => {
-                if (type === 'quiz') {
-                    return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
-児童の知識定着や思考力トレーニングを目的とした「問題集（プリント・ドリル）」を作成してください。
-
-【テーマ・対象】
-学年・教科：${inputs.gradeSubject}
-単元名・テーマ：${inputs.theme}
-
-【学習のねらい・評価規準】
-ねらい：${inputs.aim}
-評価規準：${inputs.criteria}
-${useImg ? '\n※添付された画像のテキストや問題をOCRで読み取り、それらをベースに類題や応用問題などを追加して演習問題集を構成してください。\n' : ''}
-【設計の要件・制約】
-1. 指定されたJSONのデータ構造（sections, answers）を厳密に維持してください。
-2. 基礎から応用まで順番に解けるよう、複数の「大問（sections）」で問題を構成してください。
-3. 以下のブロック（type）を駆使して問題を作成してください：
-   - "text": 問題のリード文や指示（穴埋め問題にする場合は {{キー名}} を使用）。
-   - "fill_in_box": 単答式、語句の穴埋め問題などの短い解答枠。
-   - "write_box": 記述問題や、途中式・考え方を書かせる大きな解答枠。必ず "bgType" を指定すること（"lines": 罫線, "grid_large": 低学年用20mmマス, "grid_medium": 中学年用15mmマス, "grid_small": 高学年用10mmマス, "blank": 無地）。
-4. 全ての問題の正答・模範解答は、必ず answers オブジェクトに含めてください。
-5. 出力は純粋なJSONテキストのみとし、Markdown記法（\`\`\`json など）は絶対に除外してください。
-
-【参考にするフォーマット（現在のデータ）】
-${JSON.stringify(data, null, 2)}`;
-                } else {
-                    return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
-教育学的知見（学力の三要素、評価の三観点、個別最適な学びと協同的な学び）に基づき、児童の思考プロセスを構造化するワークシートを作成してください。
-
-【テーマ・対象】
-学年・教科：${inputs.gradeSubject}
-単元名・テーマ：${inputs.theme}
-
-【学習のねらい・評価規準】
-ねらい：${inputs.aim}
-評価規準：${inputs.criteria}
-${useImg ? '\n※添付された教科書や資料の画像がある場合は、OCRで内容（テキストや重要な発問、図解の意図など）を読み取り、学習内容に沿ってワークシートを構成してください。\n' : ''}
-【設計の要件・制約】
-1. 指定されたJSONのデータ構造（sections, answers）を厳密に維持してください。
-2. 以下のブロック（type）を駆使して学習活動を構成してください：
-   - "aim_box": 授業の導入で示される問い（めあて）。
-   - "text": 資料の提示や説明（穴埋めは {{キー名}} を使用）。
-   - "keywords": 児童の認知を助けるヒント語彙バンク。
-   - "checkbox_group": 気付きや観察、思考のチェックポイント。
-   - "write_box": 記述やスケッチを行う自力解決エリア。必ず "bgType" を指定すること（"lines": 罫線, "grid_large": 低学年用20mmマス, "grid_medium": 中学年用15mmマス, "grid_small": 高学年用10mmマス, "blank": 無地）。
-   - "self_eval": 学習の省察と次への意欲を形成する振り返り欄（末尾に配置）。
-3. 穴埋め（text内）や write_box の模範解答は、必ず answers オブジェクトに含めてください。
-4. 出力は純粋なJSONテキストのみとし、Markdown記法（\`\`\`json など）は絶対に除外してください。
-
-【参考にするフォーマット（現在のデータ）】
-${JSON.stringify(data, null, 2)}`;
-                }
-            };
-
-            const openPromptModal = () => {
-                setUseImageOption(false);
-                setPromptType('worksheet');
-                setPromptText(generatePrompt('worksheet', false, worksheetData, promptInputs));
-                setShowPromptModal(true);
-                setCopyMessage("");
-            };
-
-            const handlePromptInputChange = (field, value) => {
-                const newInputs = { ...promptInputs, [field]: value };
-                setPromptInputs(newInputs);
-                setPromptText(generatePrompt(promptType, useImageOption, worksheetData, newInputs));
-            };
-
-            const handlePromptTypeChange = (type) => {
-                setPromptType(type);
-                setPromptText(generatePrompt(type, useImageOption, worksheetData, promptInputs));
-            };
-
-            const handleCopyPrompt = () => {
-                const textarea = document.createElement('textarea');
-                textarea.value = promptText;
-                document.body.appendChild(textarea);
-                textarea.select();
-                try {
-                    document.execCommand('copy');
-                    setCopyMessage("クリップボードにコピーしました！ChatGPTやClaudeなどに貼り付けてご活用ください。");
-                } catch (err) {
-                    setCopyMessage("コピーに失敗しました。手動でテキストを選択してコピーしてください。");
-                }
-                document.body.removeChild(textarea);
-                setTimeout(() => setCopyMessage(""), 3000);
-            };
+            useEffect(() => { setSelectedPlanIndex("-1"); }, [selectedPlanGrade, selectedPlanSubject, planData]);
 
             const renderTextWithBlanks = (text) => {
                 if (!text) return "";
@@ -3687,27 +3578,16 @@ ${JSON.stringify(data, null, 2)}`;
                         const key = match[1];
                         return <span key={i} className={mode === 'teacher' ? 'text-red-600 font-bold px-2 underline decoration-red-300' : 'border-b border-gray-400 px-10'}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[key]) || '') : ''}</span>;
                     }
-                    
                     const mathParts = part.split(/(\$\$[\s\S]+?\$\$|\$[\s\S]+?\$)/g);
                     return (
                         <span key={i}>
                             {mathParts.map((mathPart, j) => {
                                 if (mathPart.startsWith('$$') && mathPart.endsWith('$$')) {
                                     const math = mathPart.slice(2, -2);
-                                    if (window.katex) {
-                                        try {
-                                            const html = window.katex.renderToString(math, { displayMode: true, throwOnError: false });
-                                            return <span key={j} dangerouslySetInnerHTML={{ __html: html }} />;
-                                        } catch (e) { return <span key={j}>{mathPart}</span>; }
-                                    }
+                                    if (window.katex) { try { return <span key={j} dangerouslySetInnerHTML={{ __html: window.katex.renderToString(math, { displayMode: true, throwOnError: false }) }} />; } catch (e) { return <span key={j}>{mathPart}</span>; } }
                                 } else if (mathPart.startsWith('$') && mathPart.endsWith('$')) {
                                     const math = mathPart.slice(1, -1);
-                                    if (window.katex) {
-                                        try {
-                                            const html = window.katex.renderToString(math, { displayMode: false, throwOnError: false });
-                                            return <span key={j} dangerouslySetInnerHTML={{ __html: html }} />;
-                                        } catch (e) { return <span key={j}>{mathPart}</span>; }
-                                    }
+                                    if (window.katex) { try { return <span key={j} dangerouslySetInnerHTML={{ __html: window.katex.renderToString(math, { displayMode: false, throwOnError: false }) }} />; } catch (e) { return <span key={j}>{mathPart}</span>; } }
                                 }
                                 return <span key={j}>{mathPart}</span>;
                             })}
@@ -3717,172 +3597,52 @@ ${JSON.stringify(data, null, 2)}`;
             };
 
             const renderBlock = (sIdx, bIdx, block, col = 'blocks') => {
+                const isDraggingThis = dragInfo?.type === 'block' && dragInfo.sIdx === sIdx && dragInfo.col === col && dragInfo.bIdx === bIdx;
                 if (mode === 'edit') {
                     const info = blockInfo[block.type] || { label: block.type, icon: 'box' };
                     return (
-                        <div key={bIdx} className="mb-4 relative font-sans bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                            
-                            <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200">
-                                <div className="flex items-center gap-1.5 text-blue-600">
-                                    <Icon name={info.icon} size={16} />
-                                    <span className="text-xs font-bold">{info.label}</span>
-                                </div>
-                                <div className="flex gap-1">
-                                    <button onClick={() => moveBlock(sIdx, bIdx, -1, col)} className="p-1.5 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600 shadow-sm active:scale-95" title="上へ移動"><Icon name="chevron-up" size={14}/></button>
-                                    <button onClick={() => moveBlock(sIdx, bIdx, 1, col)} className="p-1.5 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600 shadow-sm active:scale-95" title="下へ移動"><Icon name="chevron-down" size={14}/></button>
-                                    <button onClick={() => cloneBlock(sIdx, bIdx, col)} className="p-1.5 bg-white border border-blue-300 text-blue-600 rounded hover:bg-blue-50 shadow-sm ml-2 active:scale-95" title="複製"><Icon name="copy" size={14}/></button>
-                                    <button onClick={() => removeBlock(sIdx, bIdx, col)} className="p-1.5 bg-red-50 text-red-600 border border-red-300 rounded hover:bg-red-100 shadow-sm active:scale-95" title="削除"><Icon name="x" size={14}/></button>
+                        <div key={bIdx} draggable onDragStart={(e) => handleBlockDragStart(e, sIdx, col, bIdx)} onDragOver={handleDragOver} onDrop={(e) => handleBlockDrop(e, sIdx, col, bIdx)} className={`mb-4 relative font-sans bg-white border rounded-xl overflow-hidden shadow-sm transition-all duration-200 ${isDraggingThis ? 'opacity-30 border-blue-500 scale-[0.98] shadow-inner' : 'border-slate-200 hover:shadow-md hover:border-slate-300'}`}>
+                            <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-200 cursor-move" title="ドラッグして移動">
+                                <div className="flex items-center gap-2 text-blue-600"><Icon name="grip-vertical" size={16} className="text-slate-400" /><Icon name={info.icon} size={16} /><span className="text-xs font-bold">{info.label}</span></div>
+                                <div className="flex gap-1 opacity-60 hover:opacity-100">
+                                    <button onClick={() => cloneBlock(sIdx, bIdx, col)} className="p-1.5 bg-white border border-blue-200 text-blue-600 rounded hover:bg-blue-50 shadow-sm ml-2 active:scale-95" title="複製"><Icon name="copy" size={14}/></button>
+                                    <button onClick={() => removeBlock(sIdx, bIdx, col)} className="p-1.5 bg-white text-rose-600 border border-rose-200 rounded hover:bg-rose-50 shadow-sm active:scale-95" title="削除"><Icon name="x" size={14}/></button>
                                 </div>
                             </div>
-                            
                             <div className="p-4">
-                                {block.type === 'aim_box' && (
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">めあての文章</label>
-                                        <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none" rows="2" placeholder="めあてを入力"></textarea>
-                                    </div>
-                                )}
-
-                                {block.type === 'text' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">文章（穴埋め部分は {'{{答え}}'} で囲む）</label>
-                                            <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none resize-y" rows="2" placeholder="文章を入力"></textarea>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-3 text-xs bg-slate-50 p-2 rounded-lg border border-slate-200">
-                                            <label className="flex items-center gap-1.5 cursor-pointer font-bold text-slate-700 p-1 hover:bg-slate-200 rounded transition-colors">
-                                                <input type="checkbox" checked={!!block.bold} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bold = e.target.checked)} className="rounded w-4 h-4 text-blue-600" /> 太字
-                                            </label>
-                                            <div className="h-5 w-px bg-slate-300 hidden sm:block"></div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-500 font-bold"><Icon name="type" size={14} className="inline"/> サイズ:</span>
-                                                <select value={block.fontSize || 'text-base'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].fontSize = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200">
-                                                    <option value="text-xs">極小 (9pt~)</option><option value="text-sm">小 (10pt~)</option><option value="text-base">標準 (12pt~)</option><option value="text-lg">大 (16pt~)</option><option value="text-xl">特大 (22pt~)</option>
-                                                </select>
-                                            </div>
-                                            <div className="h-5 w-px bg-slate-300 hidden sm:block"></div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-slate-500 font-bold"><Icon name="align-left" size={14} className="inline"/> 配置:</span>
-                                                <select value={block.textAlign || 'text-left'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].textAlign = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200">
-                                                    <option value="text-left">左</option><option value="text-center">中央</option><option value="text-right">右</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {block.type === 'bullets' && (
-                                    <div className="space-y-3">
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">リスト項目（穴埋め部分は {'{{答え}}'} で囲む）</label>
-                                        {(block.items || []).map((item, i) => (
-                                            <div key={i} className="flex gap-2 items-center">
-                                                <input value={item} onChange={e => updateData(d => { d.sections[sIdx][col][bIdx].items[i] = e.target.value; })} className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                                <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.splice(i, 1); })} className="text-rose-500 hover:text-rose-700 p-2 bg-rose-50 rounded-lg active:scale-95"><Icon name="minus-circle" size={18}/></button>
-                                            </div>
-                                        ))}
-                                        <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.push("新項目"); })} className="text-blue-600 text-sm font-bold flex items-center gap-1.5 p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg w-max transition-colors active:scale-95"><Icon name="plus-circle" size={18}/> 項目を追加</button>
-                                    </div>
-                                )}
-
-                                {block.type === 'checkbox_group' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">チェックリストのタイトル</label>
-                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="確認項目" />
-                                        </div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mt-2 mb-1">チェック項目</label>
-                                        {(block.items || []).map((item, i) => (
-                                            <div key={i} className="flex gap-2 items-center">
-                                                <input value={item} onChange={e => updateData(d => { d.sections[sIdx][col][bIdx].items[i] = e.target.value; })} className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200 outline-none" />
-                                                <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.splice(i, 1); })} className="text-rose-500 hover:text-rose-700 p-2 bg-rose-50 rounded-lg active:scale-95"><Icon name="minus-circle" size={18}/></button>
-                                            </div>
-                                        ))}
-                                        <button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.push("新項目"); })} className="text-blue-600 text-sm font-bold flex items-center gap-1.5 p-2.5 bg-blue-50 hover:bg-blue-100 rounded-lg w-max transition-colors active:scale-95"><Icon name="plus-circle" size={18}/> 項目を追加</button>
-                                    </div>
-                                )}
-
-                                {block.type === 'fill_in_box' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">問いの文章</label>
-                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="問いの内容" />
-                                        </div>
-                                        <div className="flex items-center gap-3 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
-                                            <span className="font-bold text-red-600 shrink-0">答え:</span>
-                                            <input value={(worksheetData.answers && worksheetData.answers[block.answerKey]) || ''} onChange={e => updateAnswer(block.answerKey, e.target.value)} className="flex-1 border-b-2 border-red-300 bg-transparent outline-none focus:border-red-500 py-1 font-bold text-red-800" placeholder="正解を入力" />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {block.type === 'write_box' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-slate-500 mb-1">記述・スケッチの問い</label>
-                                            <input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="何を書きますか？" />
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
-                                            <span className="text-slate-500 font-bold text-xs"><Icon name="layout-grid" size={14} className="inline"/> 背景タイプ:</span>
-                                            <select value={block.bgType || 'lines'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bgType = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-blue-200 text-xs">
-                                                <option value="lines">罫線 (ノート風)</option>
-                                                <option value="grid_large">方眼 (低学年用 20mm)</option>
-                                                <option value="grid_medium">方眼 (中学年用 15mm)</option>
-                                                <option value="grid_small">方眼 (高学年用 10mm)</option>
-                                                <option value="blank">無地 (スケッチ・自由枠)</option>
-                                            </select>
-                                        </div>
-
-                                        <div className="flex flex-col gap-2 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
-                                            <span className="font-bold text-red-600 text-[10px] uppercase">模範解答例:</span>
-                                            <textarea value={(worksheetData.answers && worksheetData.answers[block.boxId]) || ''} onChange={e => updateAnswer(block.boxId, e.target.value)} className="w-full border border-red-200 rounded-lg p-3 bg-white outline-none focus:ring-2 focus:ring-red-300 text-red-700 font-bold" rows="3" placeholder="解答例を入力"></textarea>
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {block.type === 'keywords' && (
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">ヒント語群（カンマで区切る）</label>
-                                        <input value={(block.words || []).join(', ')} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].words = e.target.value.split(',').map(s=>s.trim()))} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" placeholder="語句1, 語句2..." />
-                                    </div>
-                                )}
-                                
-                                {block.type === 'quote' && (
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-slate-500 mb-1">引用文・初発の感想など</label>
-                                        <textarea value={block.content || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-200 outline-none" rows="3" placeholder="テキストを入力"></textarea>
-                                    </div>
-                                )}
-                                
-                                {block.type === 'self_eval' && <div className="text-xs text-slate-400 font-bold bg-slate-100 p-3 rounded-lg text-center">（学習の振り返り枠：設定項目はありません）</div>}
+                                {block.type === 'aim_box' && <div><label className="block text-[10px] font-bold text-slate-500 mb-1">めあての文章</label><textarea value={block.content || ''} onInput={autoResizeTextarea} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="auto-resize w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 outline-none whitespace-pre-wrap"></textarea></div>}
+                                {block.type === 'text' && <div className="space-y-3"><div><label className="block text-[10px] font-bold text-slate-500 mb-1">文章（穴埋め部分は {'{{答え}}'} で囲む）</label><textarea value={block.content || ''} onInput={autoResizeTextarea} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="auto-resize w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 outline-none whitespace-pre-wrap"></textarea></div><div className="flex gap-3 text-xs bg-slate-50 p-2 rounded-lg"><label><input type="checkbox" checked={!!block.bold} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bold = e.target.checked)}/> 太字</label></div></div>}
+                                {block.type === 'bullets' && <div className="space-y-3"><label className="block text-[10px] font-bold text-slate-500 mb-1">リスト項目</label>{(block.items || []).map((item, i) => <div key={i} className="flex gap-2 items-start"><textarea value={item} onInput={autoResizeTextarea} onChange={e => updateData(d => { d.sections[sIdx][col][bIdx].items[i] = e.target.value; })} className="auto-resize flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm whitespace-pre-wrap" /><button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.splice(i, 1); })} className="text-rose-500 p-2"><Icon name="minus-circle" size={18}/></button></div>)}<button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.push("新項目"); })} className="text-blue-600 text-sm font-bold flex items-center gap-1.5 p-2"><Icon name="plus-circle" size={16}/> 追加</button></div>}
+                                {block.type === 'checkbox_group' && <div className="space-y-3"><div><label className="block text-[10px] font-bold text-slate-500 mb-1">タイトル</label><input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none" /></div>{(block.items || []).map((item, i) => <div key={i} className="flex gap-2"><input value={item} onChange={e => updateData(d => { d.sections[sIdx][col][bIdx].items[i] = e.target.value; })} className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none" /><button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.splice(i, 1); })} className="text-rose-500 p-2"><Icon name="minus-circle" size={18}/></button></div>)}<button onClick={() => updateData(d => { d.sections[sIdx][col][bIdx].items.push("新項目"); })} className="text-blue-600 text-sm font-bold flex items-center gap-1.5"><Icon name="plus-circle" size={16}/> 追加</button></div>}
+                                {block.type === 'fill_in_box' && <div className="space-y-3"><div><label className="block text-[10px] font-bold text-slate-500 mb-1">問いの文章</label><input value={block.label || ''} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" /></div><div className="flex items-center gap-3 text-sm bg-red-50 p-3 rounded-lg"><span className="font-bold text-red-600">答え:</span><input value={(worksheetData.answers && worksheetData.answers[block.answerKey]) || ''} onChange={e => updateAnswer(block.answerKey, e.target.value)} className="flex-1 border-b-2 border-red-300 bg-transparent outline-none font-bold text-red-800" /></div></div>}
+                                {block.type === 'write_box' && <div className="space-y-3"><div><label className="block text-[10px] font-bold text-slate-500 mb-1">記述の問い</label><textarea value={block.label || ''} onInput={autoResizeTextarea} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].label = e.target.value)} className="auto-resize w-full border border-slate-300 rounded-lg p-2.5 text-sm whitespace-pre-wrap"></textarea></div><div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg"><span className="text-slate-500 font-bold text-xs">背景:</span><select value={block.bgType || 'lines'} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].bgType = e.target.value)} className="border border-slate-300 rounded-md px-2 py-1 bg-white text-xs"><option value="lines">罫線</option><option value="grid_large">方眼(大)</option><option value="grid_medium">方眼(中)</option><option value="grid_small">方眼(小)</option><option value="blank">無地</option></select></div><div className="flex flex-col gap-2 bg-red-50 p-3 rounded-lg"><span className="font-bold text-red-600 text-[10px]">模範解答例:</span><textarea value={(worksheetData.answers && worksheetData.answers[block.boxId]) || ''} onInput={autoResizeTextarea} onChange={e => updateAnswer(block.boxId, e.target.value)} className="auto-resize w-full border border-red-200 rounded-lg p-3 bg-white outline-none text-red-700 font-bold whitespace-pre-wrap"></textarea></div></div>}
+                                {block.type === 'keywords' && <div><label className="block text-[10px] font-bold text-slate-500 mb-1">ヒント語群（カンマ区切り）</label><input value={(block.words || []).join(', ')} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].words = e.target.value.split(',').map(s=>s.trim()))} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm" /></div>}
+                                {block.type === 'quote' && <div><label className="block text-[10px] font-bold text-slate-500 mb-1">引用文・感想など</label><textarea value={block.content || ''} onInput={autoResizeTextarea} onChange={e => updateData(d => d.sections[sIdx][col][bIdx].content = e.target.value)} className="auto-resize w-full border border-slate-300 rounded-lg p-3 text-sm whitespace-pre-wrap"></textarea></div>}
+                                {block.type === 'self_eval' && <div className="text-xs text-slate-400 font-bold bg-slate-100 p-3 rounded-lg text-center">（振り返り枠：設定項目なし）</div>}
                             </div>
                         </div>
                     );
                 }
 
                 switch (block.type) {
-                    case 'aim_box': return <div key={bIdx} className="mb-6 p-4 sm:p-5 bg-white border-2 border-slate-800 rounded-xl relative shadow-sm mt-2"><div className="absolute -top-3.5 left-4 bg-slate-800 text-white text-xs font-black px-4 py-1.5 rounded-full tracking-widest flex items-center gap-1.5"><Icon name="target" size={14}/>めあて</div><p className="font-bold text-lg sm:text-xl text-slate-800 leading-relaxed mt-2 text-center">{renderTextWithBlanks(block.content || '')}</p></div>;
-                    case 'text': return <div key={bIdx} className={`mb-4 ${block.bold ? 'font-bold text-slate-800' : 'text-slate-700'} ${block.fontSize || 'text-base'} ${block.textAlign || 'text-left'} leading-relaxed`}>{renderTextWithBlanks(block.content || '')}</div>;
-                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4 text-base">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1 text-slate-400">●</span><span>{renderTextWithBlanks(item)}</span></div>)}</div>;
-                    case 'checkbox_group': return <div key={bIdx} className="mb-6"><p className="font-bold text-sm text-slate-600 mb-3 flex items-center gap-2"><Icon name="check-square" size={16}/>{block.label || '確認項目'}</p><div className="flex flex-col gap-2.5">{(block.items || []).map((item, i) => <label key={i} className="flex items-start gap-3 cursor-pointer group"><div className="w-5 h-5 border-2 border-slate-300 rounded flex items-center justify-center mt-0.5 group-hover:border-slate-500 transition-colors"></div><span className="text-slate-700 leading-snug">{renderTextWithBlanks(item)}</span></label>)}</div></div>;
+                    case 'aim_box': return <div key={bIdx} className="mb-6 p-4 sm:p-5 bg-white border-2 border-slate-800 rounded-xl relative shadow-sm mt-2"><div className="absolute -top-3.5 left-4 bg-slate-800 text-white text-xs font-black px-4 py-1.5 rounded-full flex gap-1.5"><Icon name="target" size={14}/>めあて</div><p className="font-bold text-lg sm:text-xl text-slate-800 leading-relaxed mt-2 text-center whitespace-pre-wrap">{renderTextWithBlanks(block.content || '')}</p></div>;
+                    case 'text': return <div key={bIdx} className={`mb-4 ${block.bold ? 'font-bold text-slate-800' : 'text-slate-700'} ${block.fontSize || 'text-base'} ${block.textAlign || 'text-left'} leading-relaxed whitespace-pre-wrap`}>{renderTextWithBlanks(block.content || '')}</div>;
+                    case 'bullets': return <div key={bIdx} className="grid grid-cols-1 gap-2 mb-4 text-base">{(block.items || []).map((item, i) => <div key={i} className="flex items-start gap-2"><span className="font-bold mt-1 text-slate-400">●</span><span className="whitespace-pre-wrap">{renderTextWithBlanks(item)}</span></div>)}</div>;
+                    case 'checkbox_group': return <div key={bIdx} className="mb-6"><p className="font-bold text-sm text-slate-600 mb-3 flex items-center gap-2"><Icon name="check-square" size={16}/>{block.label || '確認項目'}</p><div className="flex flex-col gap-2.5">{(block.items || []).map((item, i) => <label key={i} className="flex items-start gap-3 cursor-pointer group"><div className="w-5 h-5 border-2 border-slate-300 rounded mt-0.5"></div><span className="text-slate-700 whitespace-pre-wrap">{renderTextWithBlanks(item)}</span></label>)}</div></div>;
                     case 'fill_in_box': return <div key={bIdx} className="mt-4 mb-4"><label className="block text-sm font-bold mb-2 text-slate-500 italic">{block.label || ''}</label><div className="border-4 border-double border-slate-300 rounded-xl p-4 h-20 flex items-center justify-center text-2xl font-black tracking-[0.5em] bg-slate-50">（ <span className={mode === 'teacher' ? 'text-red-600' : ''}>{mode === 'teacher' ? ((worksheetData.answers && worksheetData.answers[block.answerKey]) || '') : '　　　　　'}</span> ）</div></div>;
-                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">ヒント語彙</span><div className="flex flex-wrap gap-2">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-600 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm">{w}</span>)}</div></div>;
-                    case 'quote': return <div key={bIdx} className="bg-slate-50/80 p-5 rounded-2xl border-l-4 border-slate-400 text-base leading-loose mb-6 text-slate-700 relative"><Icon name="quote" className="absolute top-3 left-3 text-slate-200 opacity-50" size={32}/><div className="relative z-10">{renderTextWithBlanks(block.content || '')}</div></div>;
-                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-6"><p className="font-bold text-base text-slate-800 leading-relaxed">{block.label || ''}</p><div className={`write-box p-5 text-base leading-relaxed overflow-hidden group bg-${block.bgType || 'lines'}`} style={{ height: `${boxHeights[block.boxId] || 120}px` }}>{mode === 'teacher' && <span className="text-red-600 font-bold block fade-in relative z-10">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/95 p-1.5 rounded-xl border shadow-md font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-28)}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="minus" size={16}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: (p[block.boxId]||120)+28}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600 active:scale-95"><Icon name="plus" size={16}/></button></div></div></div>;
-                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-8 mb-2 font-sans border-t-2 border-slate-100 pt-6"><div className="flex flex-col gap-2"><span className="text-xs text-slate-500 font-bold flex items-center gap-1.5"><Icon name="smile" size={16}/> 今日の学習をふり返ろう</span><div className="flex gap-4 text-[10px] text-slate-400 font-bold"><span>よくわかった(A)</span><span>だいたいわかった(B)</span><span>もう少し(C)</span></div></div><div className="border-2 border-slate-200 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-slate-50 rounded-lg"><span className="font-bold text-slate-300">確認印</span></div></div>;
+                    case 'keywords': return <div key={bIdx} className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl flex items-center gap-4 mb-4 font-sans"><span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">ヒント</span><div className="flex flex-wrap gap-2">{(block.words || []).map((w, i) => <span key={i} className="text-sm font-bold text-slate-600 bg-white px-3 py-1 rounded-full border shadow-sm">{w}</span>)}</div></div>;
+                    case 'quote': return <div key={bIdx} className="bg-slate-50/80 p-5 rounded-2xl border-l-4 border-slate-400 text-base leading-loose mb-6 text-slate-700 relative"><Icon name="quote" className="absolute top-3 left-3 text-slate-200 opacity-50" size={32}/><div className="relative z-10 whitespace-pre-wrap">{renderTextWithBlanks(block.content || '')}</div></div>;
+                    case 'write_box': return <div key={bIdx} className="space-y-2 mt-4 mb-6"><p className="font-bold text-base text-slate-800 leading-relaxed whitespace-pre-wrap">{block.label || ''}</p><div className={`write-box p-5 text-base leading-relaxed overflow-hidden group bg-${block.bgType || 'lines'}`} style={{ height: `${boxHeights[block.boxId] || 120}px` }}>{mode === 'teacher' && <span className="text-red-600 font-bold block fade-in relative z-10 whitespace-pre-wrap">{(worksheetData.answers && worksheetData.answers[block.boxId]) || ''}</span>}<div className="absolute bottom-2 right-2 no-print flex gap-2 opacity-0 group-hover:opacity-100 z-20 bg-white/95 p-1.5 rounded-xl border shadow-md font-sans"><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: Math.max(60, p[block.boxId]-28)}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600"><Icon name="minus" size={16}/></button><button onClick={() => setBoxHeights(p => ({...p, [block.boxId]: (p[block.boxId]||120)+28}))} className="bg-slate-100 rounded-lg p-2 hover:bg-slate-200 text-slate-600"><Icon name="plus" size={16}/></button></div></div></div>;
+                    case 'self_eval': return <div key={bIdx} className="flex justify-between items-end mt-8 mb-2 font-sans border-t-2 border-slate-100 pt-6"><div className="flex flex-col gap-2"><span className="text-xs text-slate-500 font-bold flex items-center gap-1.5"><Icon name="smile" size={16}/> ふり返り</span><div className="flex gap-4 text-[10px] text-slate-400 font-bold"><span>よくわかった(A)</span><span>だいたい(B)</span><span>もう少し(C)</span></div></div><div className="border-2 border-slate-200 w-24 h-16 flex flex-col items-center justify-center text-[10px] bg-slate-50 rounded-lg"><span className="font-bold text-slate-300">確認印</span></div></div>;
                     default: return null;
                 }
             };
 
-            const renderAddButtons = (sIdx, col) => (
-                <div className="mt-4 p-4 bg-blue-50/50 border border-dashed border-blue-200 rounded-2xl flex flex-wrap gap-2 items-center font-sans no-print justify-center sm:justify-start">
-                    <span className="text-xs font-bold text-blue-500 mr-2 flex items-center gap-1.5"><Icon name="plus-circle" size={18}/> ブロック追加:</span>
-                    {Object.entries(blockInfo).map(([type, info]) => (
-                        <button key={type} onClick={()=>addBlock(sIdx, type, col)} className="text-xs font-bold text-slate-600 bg-white border border-blue-200 px-3 py-2 rounded-xl shadow-sm hover:bg-blue-50 hover:text-blue-600 transition-colors active:scale-95 flex items-center gap-1.5">
-                            <Icon name={info.icon} size={14} /> {info.label}
-                        </button>
-                    ))}
-                </div>
-            );
+            const renderDropZone = (sIdx, col, bIdx) => {
+                if (mode !== 'edit') return null;
+                const isDragActive = dragInfo?.type === 'block';
+                return <div onDragOver={handleDragOver} onDrop={(e) => handleBlockDrop(e, sIdx, col, bIdx)} className={`transition-all duration-200 rounded-xl ${isDragActive ? 'h-10 my-2 border-2 border-dashed border-blue-300 bg-blue-50/50 flex items-center justify-center' : 'h-2'}`}>{isDragActive && <span className="text-blue-500 text-xs font-bold pointer-events-none opacity-50">ここにドロップ</span>}</div>;
+            };
 
             const getPages = () => {
                 const pages = []; let currentPage = [];
@@ -3893,46 +3653,60 @@ ${JSON.stringify(data, null, 2)}`;
                 if (currentPage.length > 0) pages.push(currentPage); return pages;
             };
 
-            const togglePageBreak = (id) => setPageBreaks(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-
             return (
                 <div className="p-4 sm:p-8 no-print-bg">
-                    
-                    {/* ヘルプモーダル */}
-                    {showHelp && (
+
+                    {/* AIプロンプト生成モーダル */}
+                    {showPromptModal && (
                         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
-                            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
+                            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
                                 <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="help-circle" className="text-blue-500"/> 使い方ガイド</h2>
-                                    <button onClick={() => setShowHelp(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                        <Icon name="sparkles" className="text-purple-500"/> AIプロンプト作成・コピー
+                                    </h2>
+                                    <button onClick={() => setShowPromptModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
                                 </div>
-                                <div className="p-6 overflow-y-auto space-y-8 text-sm text-slate-700 leading-relaxed">
-                                    <section>
-                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="layout" size={20}/> ３つのモード</h3>
-                                        <ul className="list-disc pl-5 space-y-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                            <li><b className="text-slate-800">生徒用：</b> 印刷して生徒に配るための白紙の状態です。</li>
-                                            <li><b className="text-red-600">解答付：</b> 赤字で解答が入り、先生用の控えや配布用の解答用紙になります。</li>
-                                            <li><b className="text-emerald-600">編集モード：</b> 設問の追加・削除、テキストの書き換えなど、ワークシートを自由にカスタマイズできます。</li>
-                                        </ul>
-                                    </section>
-                                    <section>
-                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="edit-3" size={20}/> 教育的デザインのコツ</h3>
-                                        <ul className="list-disc pl-5 space-y-2">
-                                            <li><b>めあての明示：</b> 授業の導入で「めあて・課題」ブロックを使い、目標を明確にします。</li>
-                                            <li><b>マス目の選択：</b> 「記述・スケッチ枠」では、発達段階に応じて背景（大きなマス目、罫線、無地など）を選ぶことができます。</li>
-                                            <li><b>スキャフォールディング：</b> 「ヒント語群」や「チェックリスト」を活用して、自力解決のハードルを調整します。</li>
-                                        </ul>
-                                    </section>
-                                    <section>
-                                        <h3 className="font-bold text-lg text-blue-600 mb-3 flex items-center gap-2"><Icon name="move-vertical" size={20}/> 記述枠のサイズ調整</h3>
-                                        <ul className="list-disc pl-5 space-y-2">
-                                            <li>「生徒用」または「解答付」モードの時、記述枠の右下にある ＋/－ ボタンを押すと、枠の高さを自由に調整できます。</li>
-                                            <li>操作パネルの <Icon name="maximize" size={14} className="inline bg-amber-50 text-amber-600 p-0.5 rounded border border-amber-200" /> ボタンを押すと、すべての枠の高さを初期状態にリセットできます。</li>
-                                        </ul>
-                                    </section>
+                                <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-4">
+                                    <p className="text-sm text-slate-600 font-bold mb-2">生成AI（ChatGPTやClaudeなど）に貼り付けるプロンプトを作成します。内容を修正してからコピーできます。</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">学年・教科</label>
+                                            <input value={promptInputs.gradeSubject} onChange={e => setPromptInputs({...promptInputs, gradeSubject: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">単元名・教材名</label>
+                                            <input value={promptInputs.theme} onChange={e => setPromptInputs({...promptInputs, theme: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">本時のめあて・学習活動</label>
+                                            <input value={promptInputs.aim} onChange={e => setPromptInputs({...promptInputs, aim: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" />
+                                        </div>
+                                        <div className="md:col-span-2">
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">評価規準</label>
+                                            <input value={promptInputs.criteria} onChange={e => setPromptInputs({...promptInputs, criteria: e.target.value})} className="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" />
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-2 mt-2">
+                                        <button onClick={() => setPromptType('worksheet')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${promptType==='worksheet'?'bg-purple-100 text-purple-700':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>ワークシート作成</button>
+                                        <button onClick={() => setPromptType('text')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${promptType==='text'?'bg-purple-100 text-purple-700':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>テキスト素材生成</button>
+                                    </div>
+
+                                    <div className="relative mt-2 flex-1 min-h-[200px] flex flex-col">
+                                        <label className="block text-xs font-bold text-purple-600 mb-1 flex items-center gap-1"><Icon name="bot" size={14}/> 以下のテキストをコピーしてAIに指示を出してください</label>
+                                        <textarea 
+                                            value={promptText}
+                                            onChange={e => setPromptText(e.target.value)}
+                                            className="w-full flex-1 border border-purple-200 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-purple-300 outline-none resize-none bg-purple-50/30 whitespace-pre-wrap"
+                                        ></textarea>
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
-                                    <button onClick={() => setShowHelp(false)} className="bg-slate-800 text-white font-bold px-10 py-3 rounded-xl hover:bg-slate-900 transition-colors shadow-lg active:scale-95">理解しました</button>
+                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 items-center">
+                                    {copyMessage && <span className="text-emerald-600 font-bold text-sm flex items-center gap-1 mr-auto pl-2"><Icon name="check-circle" size={18}/> {copyMessage}</span>}
+                                    <button onClick={() => setShowPromptModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors">閉じる</button>
+                                    <button onClick={handleCopyPrompt} className="bg-purple-600 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-purple-700 transition-colors shadow-lg flex items-center gap-2 active:scale-95">
+                                        <Icon name="copy" size={18}/> コピーする
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -3943,183 +3717,60 @@ ${JSON.stringify(data, null, 2)}`;
                         <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
                             <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
                                 <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                                        <Icon name="file-json" className="text-blue-500"/> JSONデータ読み込み
-                                    </h2>
-                                    <button onClick={() => setShowImportModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><Icon name="file-json" className="text-blue-500"/> JSONデータ読み込み</h2>
+                                    <button onClick={() => setShowImportModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 rounded-full"><Icon name="x"/></button>
                                 </div>
                                 <div className="p-6 flex-1 overflow-hidden flex flex-col gap-4">
-                                    <p className="text-sm text-slate-600 font-bold">
-                                        AIが出力したJSONテキスト、または保存したファイルの中身をここに貼り付けてください。<br/>
-                                        <span className="text-rose-600">※現在のワークシートの内容は上書きされます。</span>
-                                    </p>
-                                    <textarea 
-                                        value={importText} 
-                                        onChange={e => {setImportText(e.target.value); setImportError("");}} 
-                                        className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-blue-200 outline-none resize-none bg-slate-50 min-h-[300px]"
-                                        placeholder='{"title": "...", "sections": [...]}'
-                                    ></textarea>
-                                    {importError && (
-                                        <div className="bg-rose-50 text-rose-600 px-4 py-3 rounded-lg text-sm font-bold border border-rose-200 flex items-center gap-2">
-                                            <Icon name="alert-circle" size={18}/> {importError}
-                                        </div>
-                                    )}
+                                    <p className="text-sm text-slate-600 font-bold">AIが出力したJSONテキストを貼り付けてください。<span className="text-rose-600">※現在の内容は上書きされます。</span></p>
+                                    <textarea value={importText} onChange={e => {setImportText(e.target.value); setImportError("");}} className="w-full flex-1 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-blue-200 outline-none resize-none bg-slate-50 min-h-[300px]" placeholder='{"title": "...", "sections": [...]}'></textarea>
+                                    {importError && <div className="bg-rose-50 text-rose-600 px-4 py-3 rounded-lg text-sm font-bold border border-rose-200 flex items-center gap-2"><Icon name="alert-circle" size={18}/> {importError}</div>}
                                 </div>
                                 <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                                    <button onClick={() => setShowImportModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">キャンセル</button>
-                                    <button onClick={handleImportJson} className="bg-blue-600 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-lg active:scale-95 flex items-center gap-2">
-                                        <Icon name="upload" size={18}/> 読み込む
-                                    </button>
+                                    <button onClick={() => setShowImportModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50">キャンセル</button>
+                                    <button onClick={handleImportJson} className="bg-blue-600 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-blue-700 flex items-center gap-2"><Icon name="upload" size={18}/> 読み込む</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* AIプロンプトモーダル */}
-                    {showPromptModal && (
-                        <div className="fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[100] p-4 font-sans backdrop-blur-sm transition-opacity">
-                            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-[fadeIn_0.2s_ease-out]">
-                                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50 shrink-0">
-                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-                                        <Icon name="sparkles" className="text-amber-500"/> AI生成用プロンプト出力
-                                    </h2>
-                                    <button onClick={() => setShowPromptModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
-                                </div>
-                                
-                                <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-5">
-                                    
-                                    {/* モード切り替えタブ */}
-                                    <div className="flex bg-slate-100 p-1.5 rounded-xl shadow-inner w-max mx-auto border border-slate-200">
-                                        <button 
-                                            onClick={() => handlePromptTypeChange('worksheet')}
-                                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${promptType === 'worksheet' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                                        >
-                                            <Icon name="layout-template" size={16}/> ワークシート（思考の構造化）
-                                        </button>
-                                        <button 
-                                            onClick={() => handlePromptTypeChange('quiz')}
-                                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${promptType === 'quiz' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
-                                        >
-                                            <Icon name="list-checks" size={16}/> 問題集・ドリル（知識定着）
-                                        </button>
-                                    </div>
-
-                                    <p className="text-sm text-slate-600 font-bold text-center">
-                                        {promptType === 'worksheet' 
-                                            ? '授業で児童の考えを整理し、深めるためのワークシートを生成するプロンプトです。'
-                                            : '基礎問題から応用問題まで、繰り返し練習するための問題集（プリント）を生成するプロンプトです。'}
-                                    </p>
-
-                                    {/* 指導計画CSV連動エリア */}
-                                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                        <div className="flex justify-between items-center mb-3">
-                                            <label className="text-sm font-bold text-blue-800 flex items-center gap-1.5"><Icon name="book-open" size={18}/> 年間指導計画データから自動入力</label>
-                                            <button onClick={() => planInputRef.current.click()} className="text-xs bg-white border border-blue-200 hover:bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow-sm active:scale-95 transition-all"><Icon name="upload" size={14}/> CSV読込</button>
-                                            <input type="file" ref={planInputRef} accept=".csv,.txt" className="hidden" onChange={handlePlanUpload} />
-                                        </div>
-                                        
-                                        {/* 学年・教科の絞り込み */}
-                                        <div className="flex gap-2 mb-3">
-                                            <select value={selectedPlanGrade} onChange={e => setSelectedPlanGrade(e.target.value)} className="w-1/2 border border-blue-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none bg-white font-bold text-slate-700 shadow-sm cursor-pointer">
-                                                <option value="">すべての学年</option>
-                                                {availableGrades.map(g => <option key={g} value={g}>{g}</option>)}
-                                            </select>
-                                            <select value={selectedPlanSubject} onChange={e => setSelectedPlanSubject(e.target.value)} className="w-1/2 border border-blue-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-300 outline-none bg-white font-bold text-slate-700 shadow-sm cursor-pointer">
-                                                <option value="">すべての教科</option>
-                                                {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        </div>
-
-                                        <select value={selectedPlanIndex} onChange={handlePlanSelect} className="w-full border border-blue-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-300 outline-none bg-white font-bold text-slate-700 shadow-sm cursor-pointer">
-                                            <option value="-1">-- 単元を選択してフォームに適用 ({filteredPlans.length}件) --</option>
-                                            {filteredPlans.map(({ plan, index }) => (
-                                                <option key={index} value={index}>
-                                                    {plan['単元名・教材名'] || plan['単元名'] || plan['教材名'] || '単元名なし'} 
-                                                    {plan['活動番号'] ? ` (活動${plan['活動番号']})` : plan['時数'] ? ` (${plan['時数']})` : ''}
-                                                    {selectedPlanGrade === "" || selectedPlanSubject === "" ? ` [${plan['学年']||''} ${plan['教科']||plan['教科名']||''}]` : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    
-                                    {/* プロンプト入力フォーム */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-slate-50 border border-slate-200 rounded-xl">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">学年・教科</label>
-                                            <input 
-                                                value={promptInputs.gradeSubject} 
-                                                onChange={e => handlePromptInputChange('gradeSubject', e.target.value)} 
-                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" 
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">単元名・テーマ</label>
-                                            <input 
-                                                value={promptInputs.theme} 
-                                                onChange={e => handlePromptInputChange('theme', e.target.value)} 
-                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none" 
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">学習のねらい（{promptType === 'quiz' ? '出題の意図' : 'ねらい'}）</label>
-                                            <input 
-                                                value={promptInputs.aim} 
-                                                onChange={e => handlePromptInputChange('aim', e.target.value)} 
-                                                className={`w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none font-bold ${promptType === 'quiz' ? 'text-indigo-700 bg-indigo-50/30' : 'text-blue-700 bg-blue-50/30'}`} 
-                                            />
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">評価規準</label>
-                                            <input 
-                                                value={promptInputs.criteria} 
-                                                onChange={e => handlePromptInputChange('criteria', e.target.value)} 
-                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none text-slate-600" 
-                                                placeholder="例：【知技】〜について理解している"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* OCR連携オプション */}
-                                    <div className="flex flex-col gap-2 p-4 bg-blue-50/80 rounded-xl border border-blue-100">
-                                        <label className="flex items-center gap-3 cursor-pointer group w-max">
-                                            <input 
-                                                type="checkbox" 
-                                                checked={useImageOption}
-                                                onChange={(e) => {
-                                                    setUseImageOption(e.target.checked);
-                                                    setPromptText(generatePrompt(promptType, e.target.checked, worksheetData, promptInputs));
-                                                }}
-                                                className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
-                                            />
-                                            <span className="text-sm font-black text-blue-800 flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
-                                                <Icon name="image" size={18}/> 教科書や資料の画像から{promptType === 'quiz' ? '問題集' : 'ワークシート'}を生成する（OCR連携）
-                                            </span>
-                                        </label>
-                                        {useImageOption && (
-                                            <p className="text-xs text-blue-600 font-bold ml-8">
-                                                ✓ プロンプトに画像の読み取り指示が追加されました。AIにこのプロンプトを貼り付ける際、一緒に教科書やプリントの画像を添付して送信してください。
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <textarea 
-                                        value={promptText} 
-                                        onChange={e => setPromptText(e.target.value)} 
-                                        className="w-full shrink-0 border border-slate-300 rounded-xl p-4 text-sm font-mono focus:ring-2 focus:ring-amber-200 outline-none resize-none bg-slate-50 min-h-[150px]"
-                                    ></textarea>
-                                    
-                                    {copyMessage && (
-                                        <div className="bg-emerald-50 text-emerald-600 px-4 py-3 rounded-lg text-sm font-bold border border-emerald-200 text-center animate-pulse flex items-center justify-center gap-2">
-                                            <Icon name="check-circle" size={18}/> {copyMessage}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
-                                    <button onClick={() => setShowPromptModal(false)} className="bg-white text-slate-600 border border-slate-300 font-bold px-6 py-2.5 rounded-xl hover:bg-slate-50 transition-colors active:scale-95">閉じる</button>
-                                    <button onClick={handleCopyPrompt} className="bg-amber-500 text-white font-bold px-8 py-2.5 rounded-xl hover:bg-amber-600 transition-colors shadow-lg active:scale-95 flex items-center gap-2">
-                                        <Icon name="copy" size={18}/> プロンプトをコピー
-                                    </button>
-                                </div>
+                    {/* CSV連携 検索パネル */}
+                    {isPanelOpen && planData.length > 0 && (
+                        <div className="max-w-6xl mx-auto mb-4 bg-white p-4 sm:px-6 sm:py-4 rounded-2xl shadow-sm border border-slate-200 no-print flex flex-wrap gap-4 items-end font-sans transition-all">
+                            <div className="flex items-center gap-2 text-slate-700 font-black w-full mb-1 border-b pb-2"><Icon name="database" size={18} className="text-emerald-600"/> 指導計画データベースからプロンプトを作成</div>
+                            <div className="flex-1 min-w-[120px]">
+                                <label className="block text-xs font-bold text-slate-500 mb-1">学年</label>
+                                <select value={selectedPlanGrade} onChange={e => setSelectedPlanGrade(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50">
+                                    <option value="">すべて</option>{availableGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex-1 min-w-[120px]">
+                                 <label className="block text-xs font-bold text-slate-500 mb-1">教科</label>
+                                 <select value={selectedPlanSubject} onChange={e => setSelectedPlanSubject(e.target.value)} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50">
+                                    <option value="">すべて</option>{availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex-[3] min-w-[280px]">
+                                <label className="block text-xs font-bold text-slate-500 mb-1">学習活動を選択してプロンプト自動生成</label>
+                                <select value={selectedPlanIndex} onChange={e => {
+                                    setSelectedPlanIndex(e.target.value);
+                                    if (e.target.value !== "-1") {
+                                        const plan = planData[e.target.value];
+                                        setPromptInputs({
+                                            gradeSubject: `${plan['学年']||''} ${plan['教科'] || plan['教科名']||''}`.trim(),
+                                            theme: plan['単元名・教材名'] || plan['単元名'] || '',
+                                            aim: plan['学習活動内容'] || '',
+                                            criteria: plan['評価規準'] || ''
+                                        });
+                                        setShowPromptModal(true);
+                                    }
+                                }} className="w-full border border-emerald-300 rounded-lg px-3 py-2 text-sm bg-emerald-50 outline-none focus:ring-2 focus:ring-emerald-400 font-bold text-emerald-800 cursor-pointer shadow-sm">
+                                    <option value="-1">-- 単元や活動を選択してください --</option>
+                                    {filteredPlans.map(({plan, index}) => (
+                                        <option key={index} value={index}>
+                                            {plan['単元名・教材名'] || plan['単元名']} - 活動{plan['活動番号']} : {(plan['学習活動内容']||'').substring(0,30)}...
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     )}
@@ -4127,20 +3778,10 @@ ${JSON.stringify(data, null, 2)}`;
                     {/* 操作パネル */}
                     {isPanelOpen ? (
                         <div className="max-w-6xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-3xl shadow-2xl no-print border border-slate-200 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-5 relative transition-all duration-300">
-                            
-                            <button 
-                                onClick={() => setIsPanelOpen(false)} 
-                                className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-2 shadow-lg hover:bg-slate-700 transition-colors z-50"
-                                title="パネルを隠す"
-                            >
-                                <Icon name="chevron-up" size={18} />
-                            </button>
-
+                            <button onClick={() => setIsPanelOpen(false)} className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-2 shadow-lg hover:bg-slate-700 transition-colors z-50" title="パネルを隠す"><Icon name="chevron-up" size={18} /></button>
                             <div className="flex flex-col">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V10.0</h1>
-                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">Educational Format Spec</span>
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V10.6</h1>
                             </div>
-                            
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner">
                                     {['student', 'teacher', 'edit'].map(m => (
@@ -4149,27 +3790,18 @@ ${JSON.stringify(data, null, 2)}`;
                                         </button>
                                     ))}
                                 </div>
-                                
                                 <div className="hidden sm:block w-px h-10 bg-slate-200 mx-2"></div>
-
                                 <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                    <button onClick={() => setShowPromptModal(true)} className="flex-1 sm:flex-none px-4 py-2.5 bg-purple-50 text-purple-600 rounded-xl border border-purple-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-purple-100 active:scale-95 transition-transform"><Icon name="sparkles" size={16}/>AIプロンプト</button>
                                     <button onClick={() => {setShowImportModal(true); setImportText(""); setImportError("");}} className="flex-1 sm:flex-none px-4 py-2.5 bg-slate-50 text-slate-600 rounded-xl border border-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-slate-100 active:scale-95 transition-transform"><Icon name="file-json" size={16}/>JSON読込</button>
                                     <button onClick={handleDownloadJson} className="flex-1 sm:flex-none px-4 py-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 hover:bg-blue-100 active:scale-95 transition-transform"><Icon name="save" size={16}/>保存</button>
                                 </div>
                             </div>
-
                             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-                                <button onClick={openPromptModal} className="px-4 py-2.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-xl hover:bg-amber-100 flex items-center justify-center transition-colors shadow-sm text-xs sm:text-sm font-bold gap-2 active:scale-95" title="AI用プロンプトを生成">
-                                    <Icon name="sparkles" size={16}/> AIプロンプト
-                                </button>
-                                
-                                <button onClick={() => setShowHelp(true)} className="p-2.5 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded-xl hover:bg-indigo-100 flex items-center justify-center transition-colors shadow-sm" title="使い方ガイド"><Icon name="help-circle" size={18}/></button>
-                                
                                 {mode === 'edit' && (
                                     <div className="flex gap-2 mr-2">
                                         <button onClick={handleUndo} disabled={historyIndex === 0} className={`p-2.5 rounded-xl border transition flex items-center justify-center ${historyIndex === 0 ? 'bg-slate-50 text-slate-300 border-slate-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm active:scale-95'}`} title="元に戻す"><Icon name="undo-2" size={18}/></button>
                                         <button onClick={handleRedo} disabled={historyIndex === history.length - 1} className={`p-2.5 rounded-xl border transition flex items-center justify-center ${historyIndex === history.length - 1 ? 'bg-slate-50 text-slate-300 border-slate-100' : 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 shadow-sm active:scale-95'}`} title="やり直す"><Icon name="redo-2" size={18}/></button>
-                                        <button onClick={resetBoxHeights} className="p-2.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-xl hover:bg-amber-100 flex items-center justify-center shadow-sm active:scale-95" title="枠のサイズを初期化"><Icon name="maximize" size={18}/></button>
                                     </div>
                                 )}
                                 <div className="flex gap-2">
@@ -4185,15 +3817,11 @@ ${JSON.stringify(data, null, 2)}`;
                         </div>
                     ) : (
                         <div className="max-w-6xl mx-auto mb-8 no-print sticky top-4 z-50 flex justify-center">
-                            <button 
-                                onClick={() => setIsPanelOpen(true)} 
-                                className="bg-slate-800 text-white px-6 py-2.5 rounded-full font-bold shadow-xl flex items-center gap-2 hover:bg-slate-900 active:scale-95 transition-all opacity-80 hover:opacity-100"
-                            >
-                                <Icon name="settings" size={18} /> 操作パネルを表示 <Icon name="chevron-down" size={18} />
-                            </button>
+                            <button onClick={() => setIsPanelOpen(true)} className="bg-slate-800 text-white px-6 py-2.5 rounded-full font-bold shadow-xl flex items-center gap-2 hover:bg-slate-900 active:scale-95 transition-all opacity-80 hover:opacity-100"><Icon name="settings" size={18} /> 操作パネルを表示 <Icon name="chevron-down" size={18} /></button>
                         </div>
                     )}
 
+                    {/* ワークシート本体 */}
                     <div className="flex flex-col items-center gap-12 pb-32">
                         {getPages().map((pageSections, pageIdx) => (
                             <div 
@@ -4207,7 +3835,6 @@ ${JSON.stringify(data, null, 2)}`;
                             >
                                 <div className="absolute -left-16 top-0 no-print flex flex-col items-center gap-1 font-sans">
                                     <span className="bg-slate-800 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold shadow-lg text-lg">{pageIdx + 1}</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page</span>
                                 </div>
 
                                 <div className="p-12 sm:p-16 page-content h-full">
@@ -4219,7 +3846,7 @@ ${JSON.stringify(data, null, 2)}`;
                                                     <input value={worksheetData.title || ''} onChange={e => updateData(d => d.title = e.target.value)} className="w-full text-2xl sm:text-3xl font-black text-center border border-slate-300 bg-white rounded-xl px-4 py-3 outline-none focus:ring-4 focus:ring-blue-200 shadow-sm transition-shadow" placeholder="タイトルを入力" />
                                                 </div>
                                             ) : (
-                                                <h2 className="text-2xl sm:text-3xl font-black text-center leading-tight text-slate-800">{worksheetData.title || ''}</h2>
+                                                <h2 className="text-2xl sm:text-3xl font-black text-center leading-tight text-slate-800 whitespace-pre-wrap">{worksheetData.title || ''}</h2>
                                             )}
                                             <div className="absolute -bottom-1 left-0 w-1/4 h-1 bg-slate-800"></div>
                                         </div>
@@ -4228,23 +3855,28 @@ ${JSON.stringify(data, null, 2)}`;
                                     {pageSections.map((section) => {
                                         const sIdx = worksheetData.sections.findIndex(s => s.id === section.id);
                                         const is2Col = section.layout === '2-col';
+                                        const isDraggingSection = dragInfo?.type === 'section' && dragInfo.sIdx === sIdx;
                                         
                                         return (
-                                            <div key={section.id} className={`relative mb-12 ${mode === 'edit' ? 'border-2 border-dashed border-emerald-300 rounded-3xl p-4 sm:p-6 bg-emerald-50/30 mb-16' : ''}`}>
-                                                
+                                            <div 
+                                                key={section.id} 
+                                                draggable={mode === 'edit'}
+                                                onDragStart={(e) => mode === 'edit' && handleSectionDragStart(e, sIdx)}
+                                                onDragOver={handleDragOver}
+                                                onDrop={(e) => handleSectionDrop(e, sIdx)}
+                                                className={`relative mb-12 transition-all ${mode === 'edit' ? `border-2 border-dashed border-emerald-300 rounded-3xl p-4 sm:p-6 bg-emerald-50/30 mb-16 ${isDraggingSection ? 'opacity-30 scale-[0.98]' : ''}` : ''}`}
+                                            >
                                                 {mode === 'edit' && (
-                                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-6 bg-white p-3 rounded-2xl border border-emerald-200 shadow-sm font-sans">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 mb-6 bg-white p-3 rounded-2xl border border-emerald-200 shadow-sm font-sans cursor-move" title="大問をドラッグして移動">
                                                         <div className="flex items-center gap-3">
+                                                            <Icon name="grip-horizontal" size={20} className="text-slate-400" />
                                                             <span className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider">大問 {sIdx + 1}</span>
-                                                            <button onClick={() => toggleLayout(sIdx)} className={`px-3 py-1.5 border rounded-lg shadow-sm text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${is2Col ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
+                                                            <button onClick={(e) => { e.stopPropagation(); toggleLayout(sIdx); }} className={`px-3 py-1.5 border rounded-lg shadow-sm text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${is2Col ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'}`}>
                                                                 <Icon name={is2Col ? 'layout-list' : 'columns'} size={14}/> <span className="hidden sm:inline">{is2Col ? '1カラムに戻す' : '2カラムにする'}</span>
                                                             </button>
                                                         </div>
-                                                        <div className="flex gap-1.5">
-                                                            <button onClick={() => moveSection(sIdx, -1)} className="bg-white border border-slate-200 text-slate-600 p-2 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95" title="大問を上へ"><Icon name="arrow-up" size={16}/></button>
-                                                            <button onClick={() => moveSection(sIdx, 1)} className="bg-white border border-slate-200 text-slate-600 p-2 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95" title="大問を下へ"><Icon name="arrow-down" size={16}/></button>
-                                                            <button onClick={() => cloneSection(sIdx)} className="bg-white border border-blue-200 text-blue-600 p-2 rounded-lg shadow-sm hover:bg-blue-50 active:scale-95 ml-2" title="大問を複製"><Icon name="copy" size={16}/></button>
-                                                            <button onClick={() => removeSection(sIdx)} className="bg-rose-50 text-rose-600 border border-rose-200 p-2 rounded-lg shadow-sm hover:bg-rose-100 active:scale-95" title="大問を削除"><Icon name="trash-2" size={16}/></button>
+                                                        <div className="flex gap-1.5 opacity-60 hover:opacity-100">
+                                                            <button onClick={(e) => { e.stopPropagation(); removeSection(sIdx); }} className="bg-rose-50 text-rose-600 border border-rose-200 p-2 rounded-lg shadow-sm hover:bg-rose-100 active:scale-95" title="大問を削除"><Icon name="trash-2" size={16}/></button>
                                                         </div>
                                                     </div>
                                                 )}
@@ -4252,7 +3884,7 @@ ${JSON.stringify(data, null, 2)}`;
                                                 <div className="flex items-start justify-between mb-6 pb-2 border-b-2 border-slate-800/10 mt-2 sm:mt-0">
                                                     <div className="flex-1">
                                                         {mode === 'edit' ? (
-                                                            <div className="space-y-3 w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-4">
+                                                            <div className="space-y-3 w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-4" onDragStart={e => e.preventDefault()}>
                                                                 <div>
                                                                     <label className="block text-xs font-bold text-slate-500 mb-1.5">大問のタイトル</label>
                                                                     <input value={section.title || ''} onChange={e => updateData(d => d.sections[sIdx].title = e.target.value)} className="w-full text-lg sm:text-xl font-black border border-slate-300 bg-slate-50 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-300 focus:bg-white transition-colors" placeholder="見出しを入力" />
@@ -4264,11 +3896,9 @@ ${JSON.stringify(data, null, 2)}`;
                                                             </div>
                                                         ) : (
                                                             <div className="flex items-center gap-3 sm:gap-4">
-                                                                <div className="bg-slate-800 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-xl font-sans font-black shadow-lg shadow-slate-200 shrink-0">
-                                                                    {sIdx + 1}
-                                                                </div>
+                                                                <div className="bg-slate-800 text-white w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl sm:rounded-2xl text-lg sm:text-xl font-sans font-black shadow-lg shadow-slate-200 shrink-0">{sIdx + 1}</div>
                                                                 <div>
-                                                                    <h3 className="text-lg sm:text-xl font-black text-slate-800">{section.title || ''}</h3>
+                                                                    <h3 className="text-lg sm:text-xl font-black text-slate-800 whitespace-pre-wrap">{section.title || ''}</h3>
                                                                     <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1 opacity-90">[{section.criteria || ''}]</span>
                                                                 </div>
                                                             </div>
@@ -4279,28 +3909,34 @@ ${JSON.stringify(data, null, 2)}`;
                                                 <div className="transition-all duration-300">
                                                     {is2Col ? (
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 print:grid-cols-2 print:gap-10 relative">
-                                                            <div className="flex flex-col">
+                                                            <div className="flex flex-col min-h-[100px]">
                                                                 {(section.leftBlocks || []).map((block, bIdx) => renderBlock(sIdx, bIdx, block, 'leftBlocks'))}
-                                                                {mode === 'edit' && renderAddButtons(sIdx, 'leftBlocks')}
+                                                                {renderDropZone(sIdx, 'leftBlocks', section.leftBlocks?.length || 0)}
+                                                                {mode === 'edit' && <div className="mt-2 text-center"><button onClick={()=>addBlock(sIdx, 'write_box', 'leftBlocks')} className="text-xs font-bold text-blue-500 border border-dashed border-blue-300 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors w-full"><Icon name="plus" size={14} className="inline"/> ブロック追加</button></div>}
                                                             </div>
-                                                            <div className="flex flex-col md:column-divider print:column-divider border-slate-200 pt-6 md:pt-0 print:pt-0 border-t border-dashed md:border-t-0 print:border-t-0">
+                                                            <div className="flex flex-col min-h-[100px] md:column-divider print:column-divider border-slate-200 pt-6 md:pt-0 print:pt-0 border-t border-dashed md:border-t-0 print:border-t-0">
                                                                 {(section.rightBlocks || []).map((block, bIdx) => renderBlock(sIdx, bIdx, block, 'rightBlocks'))}
-                                                                {mode === 'edit' && renderAddButtons(sIdx, 'rightBlocks')}
+                                                                {renderDropZone(sIdx, 'rightBlocks', section.rightBlocks?.length || 0)}
+                                                                {mode === 'edit' && <div className="mt-2 text-center"><button onClick={()=>addBlock(sIdx, 'write_box', 'rightBlocks')} className="text-xs font-bold text-blue-500 border border-dashed border-blue-300 bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors w-full"><Icon name="plus" size={14} className="inline"/> ブロック追加</button></div>}
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex flex-col">
+                                                        <div className="flex flex-col min-h-[100px]">
                                                             {(section.blocks || []).map((block, bIdx) => renderBlock(sIdx, bIdx, block, 'blocks'))}
-                                                            {mode === 'edit' && renderAddButtons(sIdx, 'blocks')}
+                                                            {renderDropZone(sIdx, 'blocks', section.blocks?.length || 0)}
+                                                            {mode === 'edit' && (
+                                                                <div className="mt-4 p-4 bg-blue-50/50 border border-dashed border-blue-200 rounded-2xl flex flex-wrap gap-2 items-center font-sans no-print justify-center sm:justify-start">
+                                                                    <span className="text-xs font-bold text-blue-500 mr-2 flex items-center gap-1.5"><Icon name="plus-circle" size={18}/> ブロック追加:</span>
+                                                                    {Object.entries(blockInfo).map(([type, info]) => (
+                                                                        <button key={type} onClick={()=>addBlock(sIdx, type, 'blocks')} className="text-xs font-bold text-slate-600 bg-white border border-blue-200 px-3 py-2 rounded-xl shadow-sm hover:bg-blue-50 hover:text-blue-600 transition-colors active:scale-95 flex items-center gap-1.5">
+                                                                            <Icon name={info.icon} size={14} /> {info.label}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
-
-                                                {mode !== 'edit' && sIdx < worksheetData.sections.length - 1 && (
-                                                    <button onClick={() => togglePageBreak(section.id)} className={`absolute -bottom-10 left-1/2 -translate-x-1/2 no-print px-5 py-2.5 rounded-full text-xs font-black flex items-center gap-2 transition-all z-30 shadow-xl border-2 active:scale-95 ${pageBreaks.includes(section.id) ? 'bg-rose-500 text-white border-rose-600 scale-105' : 'bg-white text-slate-500 border-slate-200 hover:text-slate-700 hover:border-slate-300'}`}>
-                                                        <Icon name="scissors" size={16}/>{pageBreaks.includes(section.id) ? '改ページを解除' : 'ここで改ページ'}
-                                                    </button>
-                                                )}
                                             </div>
                                         );
                                     })}
@@ -4313,13 +3949,6 @@ ${JSON.stringify(data, null, 2)}`;
                                         </div>
                                     )}
                                 </div>
-                                
-                                {overflows[pageIdx] && (
-                                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 no-print flex items-center gap-3 bg-red-600 text-white px-8 py-3 rounded-full font-black shadow-2xl animate-bounce z-[60] border-4 border-white/20">
-                                        <Icon name="alert-circle" size={20}/>
-                                        ページ内容が溢れています
-                                    </div>
-                                )}
                             </div>
                         ))}
                     </div>
