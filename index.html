@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V10.6 - D&D Integration</title>
+    <title>教材設計エンジニア V10.7 - 高精度プロンプト版</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -3306,7 +3306,6 @@
             const [boxHeights, setBoxHeights] = useState({});
             const [overflows, setOverflows] = useState({});
             const [selectedFont, setSelectedFont] = useState('kyokasho');
-            const [showHelp, setShowHelp] = useState(false);
             const [isPanelOpen, setIsPanelOpen] = useState(true);
             
             // ドラッグ＆ドロップ用ステート
@@ -3314,7 +3313,7 @@
 
             // プロンプト生成関連ステート
             const [showPromptModal, setShowPromptModal] = useState(false);
-            const [promptType, setPromptType] = useState('worksheet');
+            const [promptType, setPromptType] = useState('worksheet'); // 'worksheet' or 'quiz'
             const [promptText, setPromptText] = useState("");
             const [copyMessage, setCopyMessage] = useState("");
             const [promptInputs, setPromptInputs] = useState({ gradeSubject: "小学校3年生 国語科", theme: "「よく聞いて、じこしょうかい」", aim: "相手を見て話したり聞いたりするとともに、言葉の抑揚や強弱、間の取り方などに注意して話すことができる。", criteria: "【思・判・表】「話すこと・聞くこと」において、話し手が伝えたいことの中心を捉えている。" });
@@ -3328,7 +3327,6 @@
             const [selectedPlanGrade, setSelectedPlanGrade] = useState("");
             const [selectedPlanSubject, setSelectedPlanSubject] = useState("");
             const [selectedPlanIndex, setSelectedPlanIndex] = useState("-1");
-            const planInputRef = useRef(null);
 
             const fontOptions = [
                 { value: 'kyokasho', label: '教科書体 (推奨)', family: "'BIZ UDKyokasho', 'BIZ UD教科書体', 'UD Digital Kyokasho NP-R', 'Meiryo', sans-serif" },
@@ -3337,7 +3335,6 @@
                 { value: 'mincho', label: 'UD 明朝体', family: "'Noto Serif JP', 'MS PMincho', serif" }
             ];
 
-            // テキストエリアの自動リサイズ
             const autoResizeTextarea = (e) => {
                 e.target.style.height = 'auto';
                 e.target.style.height = e.target.scrollHeight + 'px';
@@ -3374,9 +3371,9 @@
                 return () => clearTimeout(timer);
             }, [pageBreaks, paperSize, mode, boxHeights, worksheetData]);
 
-            // プロンプト生成ロジック
+            // プロンプト生成ロジック（精度の向上：三層構造と問いの階層を反映）
             const generatePrompt = () => {
-                const base = `あなたは優秀な教材設計エンジニアです。以下の情報をもとに、小学生向けのワークシートの構成をJSON形式で出力してください。
+                const base = `あなたは優秀な教材設計エンジニアです。以下の情報をもとに、小学生向けの教材構成をJSON形式で出力してください。
 
 【授業情報】
 ・対象・教科：${promptInputs.gradeSubject}
@@ -3387,8 +3384,21 @@
 `;
                 let formatInfo = "";
                 if (promptType === 'worksheet') {
-                    formatInfo = `【出力要件】
-以下のJSONフォーマットの例に厳密に従って出力してください。コードブロックやマークダウン装飾（\`\`\`json など）は絶対に含めず、純粋なJSON文字列のみを出力してください。
+                    formatInfo = `【ワークシート設計の基本方針（レポート準拠）】
+以下の「学習の三層構造」と「問いの階層」に基づいて、深い学びを促すワークシートを設計してください。
+
+1. 学習の三層構造を意識した構成:
+   - 認知レベル: 基礎的な知識や事実の理解を問う。
+   - 情意レベル: 学習者の興味・関心を引き出し、自分事として捉えさせる。
+   - メタ認知レベル: 学習プロセス自体を振り返り、自分の成長や課題を認識させる（ふりかえり）。
+
+2. 問いの階層性:
+   - 発問1（事実発問）: テキストや資料から直接読み取れる事実を確認する。
+   - 発問2（推論発問）: 事実をもとに、理由や背景、登場人物の心情などを推測させる。
+   - 発問3（評価/応用発問）: 学んだことを自分の経験や他の事象と結びつけて意見をもたせる。
+
+【出力要件】
+上記の設計方針を反映し、以下のJSONフォーマットの例に厳密に従って出力してください。コードブロックやマークダウン装飾（\`\`\`json など）は絶対に含めず、純粋なJSON文字列のみを出力してください。
 利用可能なブロックタイプ (type): 'aim_box', 'text', 'bullets', 'checkbox_group', 'fill_in_box', 'keywords', 'quote', 'write_box', 'self_eval'
 
 {
@@ -3401,22 +3411,80 @@
       "criteria": "評価の視点",
       "layout": "1-col",
       "blocks": [
-        { "type": "aim_box", "content": "めあてを入力" },
-        { "type": "text", "content": "問題文。穴埋めは {{key1}} で囲む。" },
-        { "type": "write_box", "label": "問いを入力", "boxId": "box_ans", "defaultHeight": 120, "bgType": "lines" }
+        { "type": "aim_box", "content": "めあてを入力" }
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "2. 事実の確認（認知レベル）",
+      "criteria": "基礎的理解",
+      "layout": "1-col",
+      "blocks": [
+        { "type": "text", "content": "問題文や資料。穴埋めは {{key1}} で囲む。" }
+      ]
+    },
+    {
+      "id": "s3",
+      "title": "3. 深く考える（推論・情意レベル）",
+      "criteria": "思考・判断・表現",
+      "layout": "1-col",
+      "blocks": [
+        { "type": "write_box", "label": "理由や自分の考えを書く問い", "boxId": "box_ans", "defaultHeight": 120, "bgType": "lines" }
+      ]
+    },
+    {
+      "id": "s4",
+      "title": "4. ふりかえり（メタ認知レベル）",
+      "criteria": "主体的に学習に取り組む態度",
+      "layout": "1-col",
+      "blocks": [
+        { "type": "self_eval" }
       ]
     }
   ]
 }`;
-                } else {
-                    formatInfo = `【出力要件】\nこの授業で使う文章教材や、子供たちに読ませるテキストの草案を作成してください。`;
+                } else if (promptType === 'quiz') {
+                    formatInfo = `【問題集設計の基本方針】
+基礎的な知識・技能の定着を図るための問題集を設計してください。
+・一問一答形式や、短い記述式問題を多めに配置する。
+・スモールステップで難易度が上がるようにする。
+・知識の確認、反復練習を主な目的とする。
+
+【出力要件】
+上記の設計方針を反映し、以下のJSONフォーマットの例に厳密に従って出力してください。コードブロックやマークダウン装飾（\`\`\`json など）は絶対に含めず、純粋なJSON文字列のみを出力してください。
+利用可能なブロックタイプ (type): 'aim_box', 'text', 'bullets', 'checkbox_group', 'fill_in_box', 'keywords', 'quote', 'write_box', 'self_eval'
+
+{
+  "title": "${promptInputs.theme} 問題集",
+  "answers": { "q1": "解答例1", "q2": "解答例2", "box_q3": "記述の解答例" },
+  "sections": [
+    {
+      "id": "s1",
+      "title": "1. 基礎問題",
+      "criteria": "知識・技能の定着",
+      "layout": "1-col",
+      "blocks": [
+        { "type": "fill_in_box", "label": "次の問いに答えなさい。", "answerKey": "q1" },
+        { "type": "fill_in_box", "label": "次の問いに答えなさい。", "answerKey": "q2" }
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "2. 発展問題",
+      "criteria": "思考・判断・表現",
+      "layout": "1-col",
+      "blocks": [
+        { "type": "write_box", "label": "理由を説明しなさい。", "boxId": "box_q3", "defaultHeight": 120, "bgType": "lines" }
+      ]
+    }
+  ]
+}`;
                 }
                 setPromptText(base + formatInfo);
             };
 
             useEffect(() => { generatePrompt(); }, [promptInputs, promptType]);
 
-            // プロンプトをクリップボードにコピー
             const handleCopyPrompt = () => {
                 const textArea = document.createElement("textarea");
                 textArea.value = promptText;
@@ -3557,8 +3625,6 @@
                 const a = document.createElement('a'); a.href = dataStr; a.download = `worksheet_${Date.now()}.json`; a.click();
             };
 
-            const resetBoxHeights = () => setBoxHeights(extractHeights(worksheetData));
-
             // CSVデータ解析
             const availableGrades = [...new Set(planData.map(p => p['学年']?.trim()).filter(Boolean))];
             const availableSubjects = [...new Set(planData.map(p => (p['教科'] || p['教科名'])?.trim()).filter(Boolean))];
@@ -3688,8 +3754,8 @@
                                     </div>
                                     
                                     <div className="flex gap-2 mt-2">
-                                        <button onClick={() => setPromptType('worksheet')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${promptType==='worksheet'?'bg-purple-100 text-purple-700':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>ワークシート作成</button>
-                                        <button onClick={() => setPromptType('text')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${promptType==='text'?'bg-purple-100 text-purple-700':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>テキスト素材生成</button>
+                                        <button onClick={() => setPromptType('worksheet')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${promptType==='worksheet'?'bg-purple-100 text-purple-700':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>ワークシートモード</button>
+                                        <button onClick={() => setPromptType('quiz')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${promptType==='quiz'?'bg-purple-100 text-purple-700':'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>問題集モード</button>
                                     </div>
 
                                     <div className="relative mt-2 flex-1 min-h-[200px] flex flex-col">
@@ -3780,7 +3846,7 @@
                         <div className="max-w-6xl mx-auto mb-8 bg-white p-4 sm:p-5 rounded-3xl shadow-2xl no-print border border-slate-200 sticky top-4 z-50 font-sans flex flex-wrap items-center justify-between gap-5 relative transition-all duration-300">
                             <button onClick={() => setIsPanelOpen(false)} className="absolute -top-3 -right-3 bg-slate-800 text-white rounded-full p-2 shadow-lg hover:bg-slate-700 transition-colors z-50" title="パネルを隠す"><Icon name="chevron-up" size={18} /></button>
                             <div className="flex flex-col">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V10.6</h1>
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V10.7</h1>
                             </div>
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner">
