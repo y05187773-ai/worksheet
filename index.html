@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教材設計エンジニア V9.3 - Prompt Enhancements</title>
+    <title>教材設計エンジニア V9.4 - Worksheet & Quiz Prompts</title>
     <!-- React & Babel CDN -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -116,7 +116,7 @@
                 {
                     id: "s3", title: "3. 比較検討・練り上げ", criteria: "【思判表】他者の考えと比較し、共通点や違いを見出している。", layout: "2-col",
                     leftBlocks: [
-                        { type: "quote", content: "Ａさんの考え：\n「はしっ globalこの三角形を切り取って、反対側にくっつけると長方形になります。」" }
+                        { type: "quote", content: "Ａさんの考え：\n「はしっこの三角形を切り取って、反対側にくっつけると長方形になります。」" }
                     ],
                     rightBlocks: [
                         { type: "quote", content: "Ｂさんの考え：\n「真ん中で半分に切って、２つの形を組み合わせると長方形になります。」" }
@@ -147,11 +147,11 @@
             
             // プロンプト生成関連ステート
             const [showPromptModal, setShowPromptModal] = useState(false);
+            const [promptType, setPromptType] = useState('worksheet'); // 追加: 'worksheet' or 'quiz'
             const [promptText, setPromptText] = useState("");
             const [copyMessage, setCopyMessage] = useState("");
             const [useImageOption, setUseImageOption] = useState(false);
             
-            // 追加: プロンプト用のユーザー入力ステート
             const [promptInputs, setPromptInputs] = useState({
                 gradeSubject: "小学校5年生 算数科",
                 theme: "「面積の求め方を考えよう」",
@@ -339,9 +339,34 @@
                 setBoxHeights(newHeights);
             };
 
-            // AIプロンプト生成ロジック（入力フォーム対応版）
-            const generatePrompt = (useImg, data, inputs) => {
-                return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
+            // AIプロンプト生成ロジック（ワークシート用／問題集用 分岐対応）
+            const generatePrompt = (type, useImg, data, inputs) => {
+                if (type === 'quiz') {
+                    return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
+児童の知識定着や思考力トレーニングを目的とした「問題集（プリント・ドリル）」を作成してください。
+
+【テーマ・対象】
+学年・教科：${inputs.gradeSubject}
+単元名・テーマ：${inputs.theme}
+
+【学習のねらい・評価規準】
+ねらい：${inputs.aim}
+評価規準：${inputs.criteria}
+${useImg ? '\n※添付された画像のテキストや問題をOCRで読み取り、それらをベースに類題や応用問題などを追加して演習問題集を構成してください。\n' : ''}
+【設計の要件・制約】
+1. 指定されたJSONのデータ構造（sections, answers）を厳密に維持してください。
+2. 基礎から応用まで順番に解けるよう、複数の「大問（sections）」で問題を構成してください。
+3. 以下のブロック（type）を駆使して問題を作成してください：
+   - "text": 問題のリード文や指示（穴埋め問題にする場合は {{キー名}} を使用）。
+   - "fill_in_box": 単答式、語句の穴埋め問題などの短い解答枠。
+   - "write_box": 記述問題や、途中式・考え方を書かせる大きな解答枠。必ず "bgType" を指定すること（"lines": 罫線, "grid_large": 低学年用20mmマス, "grid_medium": 中学年用15mmマス, "grid_small": 高学年用10mmマス, "blank": 無地）。
+4. 全ての問題の正答・模範解答は、必ず answers オブジェクトに含めてください。
+5. 出力は純粋なJSONテキストのみとし、Markdown記法（\`\`\`json など）は絶対に除外してください。
+
+【参考にするフォーマット（現在のデータ）】
+${JSON.stringify(data, null, 2)}`;
+                } else {
+                    return `あなたはプロの教員であり、優秀な教材設計エンジニアです。
 教育学的知見（学力の三要素、評価の三観点、個別最適な学びと協同的な学び）に基づき、児童の思考プロセスを構造化するワークシートを作成してください。
 
 【テーマ・対象】
@@ -366,20 +391,27 @@ ${useImg ? '\n※添付された教科書や資料の画像がある場合は、
 
 【参考にするフォーマット（現在のデータ）】
 ${JSON.stringify(data, null, 2)}`;
+                }
             };
 
             const openPromptModal = () => {
                 setUseImageOption(false);
-                setPromptText(generatePrompt(false, worksheetData, promptInputs));
+                setPromptType('worksheet');
+                setPromptText(generatePrompt('worksheet', false, worksheetData, promptInputs));
                 setShowPromptModal(true);
                 setCopyMessage("");
             };
 
-            // 追加: フォームの入力ハンドラ
+            // フォーム・タブの入力ハンドラ群
             const handlePromptInputChange = (field, value) => {
                 const newInputs = { ...promptInputs, [field]: value };
                 setPromptInputs(newInputs);
-                setPromptText(generatePrompt(useImageOption, worksheetData, newInputs));
+                setPromptText(generatePrompt(promptType, useImageOption, worksheetData, newInputs));
+            };
+
+            const handlePromptTypeChange = (type) => {
+                setPromptType(type);
+                setPromptText(generatePrompt(type, useImageOption, worksheetData, promptInputs));
             };
 
             const handleCopyPrompt = () => {
@@ -704,9 +736,29 @@ ${JSON.stringify(data, null, 2)}`;
                                     </h2>
                                     <button onClick={() => setShowPromptModal(false)} className="p-2 bg-white border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-full transition-colors"><Icon name="x"/></button>
                                 </div>
-                                <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-4">
-                                    <p className="text-sm text-slate-600 font-bold">
-                                        以下のフォームに入力すると、AIに渡すプロンプトが自動生成されます。完成したテキストをコピーしてAIに送信してください。
+                                
+                                <div className="p-6 flex-1 overflow-y-auto flex flex-col gap-5">
+                                    
+                                    {/* モード切り替えタブ */}
+                                    <div className="flex bg-slate-100 p-1.5 rounded-xl shadow-inner w-max mx-auto border border-slate-200">
+                                        <button 
+                                            onClick={() => handlePromptTypeChange('worksheet')}
+                                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${promptType === 'worksheet' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            <Icon name="layout-template" size={16}/> ワークシート（思考の構造化）
+                                        </button>
+                                        <button 
+                                            onClick={() => handlePromptTypeChange('quiz')}
+                                            className={`px-6 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 ${promptType === 'quiz' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            <Icon name="list-checks" size={16}/> 問題集・ドリル（知識定着）
+                                        </button>
+                                    </div>
+
+                                    <p className="text-sm text-slate-600 font-bold text-center">
+                                        {promptType === 'worksheet' 
+                                            ? '授業で児童の考えを整理し、深めるためのワークシートを生成するプロンプトです。'
+                                            : '基礎問題から応用問題まで、繰り返し練習するための問題集（プリント）を生成するプロンプトです。'}
                                     </p>
                                     
                                     {/* プロンプト入力フォーム */}
@@ -728,11 +780,11 @@ ${JSON.stringify(data, null, 2)}`;
                                             />
                                         </div>
                                         <div className="md:col-span-2">
-                                            <label className="block text-xs font-bold text-slate-500 mb-1">学習のねらい</label>
+                                            <label className="block text-xs font-bold text-slate-500 mb-1">学習のねらい（{promptType === 'quiz' ? '出題の意図' : 'ねらい'}）</label>
                                             <input 
                                                 value={promptInputs.aim} 
                                                 onChange={e => handlePromptInputChange('aim', e.target.value)} 
-                                                className="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none font-bold text-blue-700 bg-blue-50/30" 
+                                                className={`w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-200 outline-none font-bold ${promptType === 'quiz' ? 'text-indigo-700 bg-indigo-50/30' : 'text-blue-700 bg-blue-50/30'}`} 
                                             />
                                         </div>
                                         <div className="md:col-span-2">
@@ -754,17 +806,17 @@ ${JSON.stringify(data, null, 2)}`;
                                                 checked={useImageOption}
                                                 onChange={(e) => {
                                                     setUseImageOption(e.target.checked);
-                                                    setPromptText(generatePrompt(e.target.checked, worksheetData, promptInputs));
+                                                    setPromptText(generatePrompt(promptType, e.target.checked, worksheetData, promptInputs));
                                                 }}
                                                 className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
                                             />
                                             <span className="text-sm font-black text-blue-800 flex items-center gap-1.5 group-hover:text-blue-600 transition-colors">
-                                                <Icon name="image" size={18}/> 教科書や資料の画像からワークシートを生成する（OCR連携）
+                                                <Icon name="image" size={18}/> 教科書や資料の画像から{promptType === 'quiz' ? '問題集' : 'ワークシート'}を生成する（OCR連携）
                                             </span>
                                         </label>
                                         {useImageOption && (
                                             <p className="text-xs text-blue-600 font-bold ml-8">
-                                                ✓ プロンプトに画像の読み取り指示が追加されました。AIにこのプロンプトを貼り付ける際、一緒に教科書の画像を添付して送信してください。
+                                                ✓ プロンプトに画像の読み取り指示が追加されました。AIにこのプロンプトを貼り付ける際、一緒に教科書やプリントの画像を添付して送信してください。
                                             </p>
                                         )}
                                     </div>
@@ -804,7 +856,7 @@ ${JSON.stringify(data, null, 2)}`;
                             </button>
 
                             <div className="flex flex-col">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9.3</h1>
+                                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2"><Icon name="layout-template" className="text-blue-500" /> 教材設計エンジニア V9.4</h1>
                                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">Educational Format Spec</span>
                             </div>
                             
