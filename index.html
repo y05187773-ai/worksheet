@@ -3924,8 +3924,8 @@
                                         const isDraggingSection = dragInfo?.type === 'section' && dragInfo.sIdx === sIdx;
                                         
                                         return (
+                                            <React.Fragment key={section.id}>
                                             <div 
-                                                key={section.id} 
                                                 draggable={mode === 'edit'}
                                                 onDragStart={(e) => mode === 'edit' && handleSectionDragStart(e, sIdx)}
                                                 onDragOver={handleDragOver}
@@ -4025,6 +4025,7 @@
                                                     <div className="flex-1 border-t-2 border-dashed border-amber-400"></div>
                                                 </div>
                                             )}
+                                            </React.Fragment>
                                         );
                                     })}
 
